@@ -1,0 +1,49 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "d758557fe11ba3e2d67c0376240d16c8"
+name = "Doomlings App"
+application_url = "https://doomling-app-navy.vercel.app"
+embedded = true
+
+[webhooks]
+api_version = "2026-01"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_analytics,read_cart_transforms,read_customers,read_discounts,read_metaobjects,read_orders,read_products,read_themes,write_cart_transforms,write_discounts,write_metaobject_definitions,write_metaobjects,write_orders,write_products,write_themes"
+
+[auth]
+redirect_urls = [
+  "https://doomling-app-navy.vercel.app/auth/callback",
+  "https://doomling-app-navy.vercel.app/standalone/callback"
+]
+
+[pos]
+embedded = false
+
+[metaobjects.app.upsell_rule]
+name = "Upsell rule"
+access.admin = "merchant_read_write"
+access.storefront = "public_read"
+
+[metaobjects.app.upsell_rule.fields.enabled]
+name = "Enabled"
+type = "boolean"
+required = true
+
+[metaobjects.app.upsell_rule.fields.trigger_product]
+name = "Trigger product"
+type = "product_reference"
+required = true
+
+[metaobjects.app.upsell_rule.fields.trigger_product_title]
+name = "Trigger product title"
+type = "single_line_text_field"
+
+[metaobjects.app.upsell_rule.fields.message]
+name = "Message"
+type = "single_line_text_field"
+
+[metaobjects.app.upsell_rule.fields.upsell_products]
+name = "Upsell products"
+type = "json"

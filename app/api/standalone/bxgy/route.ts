@@ -1,0 +1,91 @@
+import { NextRequest, NextResponse } from "next/server";
+import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
+import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
+import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
+import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
+
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
+async function getShop(req: NextRequest) {
+  const cookie = req.cookies.get(COOKIE_NAME)?.value;
+  return cookie ? await verifyShop(cookie) : null;
+}
+
+async function getAccessToken(shop: string) {
+  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  return session?.accessToken ?? null;
+}
+
+async function syncCompiledState(shop: string, accessToken: string) {
+  const rules = await listBxgyRules(shop, accessToken);
+  const enabledRules = rules.filter((rule) => rule.enabled);
+  await setShopBxgyRulesMetafield(shop, accessToken, enabledRules);
+
+  let syncWarning: string | null = null;
+  try {
+    const syncTimeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error("Discount sync timed out. Rule saved — try toggling the rule off/on to retry sync.")), 8_000)
+    );
+    await Promise.race([syncBxgyDiscount(shop, accessToken, enabledRules), syncTimeout]);
+  } catch (error) {
+    console.error("[bxgy] discount sync failed", error);
+    syncWarning = error instanceof Error ? error.message : "Rule saved, but discount sync failed.";
+  }
+
+  return { rules, syncWarning };
+}
+
+export async function GET(req: NextRequest) {
+  try {
+    const shop = await getShop(req);
+    if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const accessToken = await getAccessToken(shop);
+    if (!accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
+
+    const rules = await listBxgyRules(shop, accessToken);
+    return NextResponse.json({ rules });
+  } catch (error) {
+    console.error("[bxgy] GET failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to load BXGY rules" },
+      { status: 500 },
+    );
+  }
+}
+
+export async function POST(req: NextRequest) {
+  try {
+    const shop = await getShop(req);
+    if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+
+    const accessToken = await getAccessToken(shop);
+    if (!accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
+
+    const body = await req.json();
+    const result = await upsertBxgyRule(shop, accessToken, {
+      id: body.id,
+      name: body.name || "",
+      buyProducts: Array.isArray(body.buyProducts) ? body.buyProducts : [],
+      giftProduct: body.giftProduct ?? null,
+      buyQuantity: Number(body.buyQuantity) || 1,
+      giftQuantity: Number(body.giftQuantity) || 1,
+      limitOneGiftPerOrder: body.limitOneGiftPerOrder === true,
+      message: body.message || "",
+      autoAdd: body.autoAdd !== false,
+      priority: Number(body.priority) || 1,
+      enabled: body.enabled !== false,
+    });
+
+    const { syncWarning } = await syncCompiledState(shop, accessToken);
+    return NextResponse.json({ ok: true, id: result.id, warning: syncWarning });
+  } catch (error) {
+    console.error("[bxgy] POST failed", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Failed to save BXGY rule" },
+      { status: 500 },
+    );
+  }
+}
