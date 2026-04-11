@@ -13,9 +13,15 @@ declare global {
 }
 
 export default function AppBridgeProvider({ children }: AppBridgeProviderProps) {
+  const [mounted, setMounted] = useState(false);
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (typeof window === "undefined") return;
     if (window.shopify) {
       setReady(true);
@@ -37,9 +43,9 @@ export default function AppBridgeProvider({ children }: AppBridgeProviderProps) 
       window.clearInterval(interval);
       window.clearTimeout(timeout);
     };
-  }, []);
+  }, [mounted]);
 
-  if (!ready) {
+  if (!mounted || !ready) {
     return (
       <div
         style={{
