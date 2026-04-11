@@ -25,7 +25,56 @@ const DEFINITION_NAME = "Upsell rule";
 
 async function getUpsellType(shop: string, accessToken: string) {
   const resolved = await resolveMetaobjectType(shop, accessToken, TYPE, DEFINITION_NAME);
-  return resolved.type;
+  if (resolved.foundDefinition) {
+    return resolved.type;
+  }
+
+  const response = await shopifyAdminGraphql(
+    shop,
+    accessToken,
+    `
+      mutation CreateUpsellDefinition($definition: MetaobjectDefinitionCreateInput!) {
+        metaobjectDefinitionCreate(definition: $definition) {
+          metaobjectDefinition {
+            type
+          }
+          userErrors {
+            field
+            message
+            code
+          }
+        }
+      }
+    `,
+    {
+      definition: {
+        name: DEFINITION_NAME,
+        type: TYPE,
+        access: {
+          admin: "MERCHANT_READ_WRITE",
+          storefront: "PUBLIC_READ",
+        },
+        fieldDefinitions: [
+          { name: "Enabled", key: "enabled", type: "boolean" },
+          { name: "Trigger product", key: "trigger_product", type: "product_reference" },
+          { name: "Trigger product title", key: "trigger_product_title", type: "single_line_text_field" },
+          { name: "Message", key: "message", type: "single_line_text_field" },
+          { name: "Upsell products", key: "upsell_products", type: "json" },
+        ],
+      },
+    },
+  );
+
+  const errors = response?.data?.metaobjectDefinitionCreate?.userErrors ?? [];
+  if (Array.isArray(errors) && errors.length > 0) {
+    const first = errors[0];
+    const message = String(first?.message ?? "");
+    if (!/already exists/i.test(message)) {
+      throw new Error(message || "Failed to create upsell definition");
+    }
+  }
+
+  return TYPE;
 }
 
 function productGidFromId(productId: string) {
