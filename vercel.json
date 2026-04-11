@@ -7,7 +7,7 @@
   "crons": [
     {
       "path": "/api/cron/launchpad",
-      "schedule": "* * * * *"
+      "schedule": "0 0 * * *"
     }
   ],
   "headers": [
