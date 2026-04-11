@@ -69,8 +69,13 @@ async function getUpsellType(shop: string, accessToken: string) {
   if (Array.isArray(errors) && errors.length > 0) {
     const first = errors[0];
     const message = String(first?.message ?? "");
-    if (!/already exists/i.test(message)) {
+    if (!/already exists|taken/i.test(message)) {
       throw new Error(message || "Failed to create upsell definition");
+    }
+
+    const retryResolved = await resolveMetaobjectType(shop, accessToken, TYPE, DEFINITION_NAME);
+    if (retryResolved.foundDefinition) {
+      return retryResolved.type;
     }
   }
 
