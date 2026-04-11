@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import Script from "next/script";
 import PolarisProvider from "@/components/PolarisProvider";
 
 export const metadata: Metadata = {
@@ -11,7 +10,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <Script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" strategy="beforeInteractive" />
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
       </head>
       <body>
         <PolarisProvider>{children}</PolarisProvider>
