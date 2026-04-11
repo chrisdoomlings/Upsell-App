@@ -9,7 +9,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <head />
+      <head>
+        <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js" />
+      </head>
       <body>
         <PolarisProvider>{children}</PolarisProvider>
       </body>
