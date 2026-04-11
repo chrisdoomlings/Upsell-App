@@ -2,7 +2,7 @@
 
 client_id = "d758557fe11ba3e2d67c0376240d16c8"
 name = "Doomlings App"
-application_url = "https://upsell-app-production-93ef.up.railway.app"
+application_url = "https://doomling-app-navy.vercel.app"
 embedded = true
 
 [webhooks]
@@ -14,8 +14,8 @@ scopes = "read_analytics,read_cart_transforms,read_customers,read_discounts,read
 
 [auth]
 redirect_urls = [
-  "https://upsell-app-production-93ef.up.railway.app/auth/callback",
-  "https://upsell-app-production-93ef.up.railway.app/standalone/callback"
+  "https://doomling-app-navy.vercel.app/auth/callback",
+  "https://doomling-app-navy.vercel.app/standalone/callback"
 ]
 
 [pos]
