@@ -1,0 +1,21 @@
+# Learn more about configuring your app at https://shopify.dev/docs/apps/tools/cli/configuration
+
+client_id = "159bf3245c1322b49a90dea8e15c71bb"
+name = "Upseller and more"
+application_url = "https://upseller-app.vercel.app"
+embedded = true
+
+[webhooks]
+api_version = "2026-04"
+
+[access_scopes]
+# Learn more at https://shopify.dev/docs/apps/tools/cli/configuration#access_scopes
+scopes = "read_analytics,read_cart_transforms,write_cart_transforms,read_customers,read_discounts,write_discounts,write_metaobject_definitions,read_metaobjects,write_metaobjects,read_orders,write_orders,read_products,write_products,read_themes,write_themes"
+optional_scopes = [ ]
+use_legacy_install_flow = false
+
+[auth]
+redirect_urls = [
+  "https://upseller-app.vercel.app/auth/callback",
+  "https://upseller-app.vercel.app/standalone/callback"
+]

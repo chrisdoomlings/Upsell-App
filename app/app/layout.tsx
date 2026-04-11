@@ -1,18 +1,15 @@
 "use client";
 
-import AppBridgeProvider from "@/components/AppBridgeProvider";
 import EmbeddedSessionBridge from "@/components/EmbeddedSessionBridge";
 import EmbeddedAppNav from "@/components/EmbeddedAppNav";
 import { Suspense } from "react";
 
 function EmbeddedLayoutInner({ children }: { children: React.ReactNode }) {
   return (
-    <AppBridgeProvider>
-      <EmbeddedSessionBridge>
-        <EmbeddedAppNav />
-        {children}
-      </EmbeddedSessionBridge>
-    </AppBridgeProvider>
+    <EmbeddedSessionBridge>
+      <EmbeddedAppNav />
+      {children}
+    </EmbeddedSessionBridge>
   );
 }
 

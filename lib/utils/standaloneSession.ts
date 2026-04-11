@@ -1,15 +1,13 @@
-export const COOKIE_NAME = "upsale_shop";
-
-function getSecret(): string {
-  const secret = process.env.SESSION_SECRET;
-  if (!secret) throw new Error("SESSION_SECRET environment variable is not set");
-  return secret;
+if (!process.env.SESSION_SECRET) {
+  throw new Error("SESSION_SECRET environment variable is not set");
 }
+const SECRET: string = process.env.SESSION_SECRET;
+export const COOKIE_NAME = "upsale_shop";
 
 async function getKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey(
     "raw",
-    new TextEncoder().encode(getSecret()),
+    new TextEncoder().encode(SECRET),
     { name: "HMAC", hash: "SHA-256" },
     false,
     ["sign", "verify"]
