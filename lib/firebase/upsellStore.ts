@@ -16,6 +16,8 @@ export interface UpsellRule {
   id: string;
   triggerProductId: string;
   triggerProductTitle: string;
+  triggerProductIds: string[];
+  triggerProductTitles: string[];
   upsellProducts: UpsellProduct[];
   message: string;
   createdAt: string;
@@ -46,6 +48,12 @@ export function normalizeRule(id: string, data: Record<string, unknown>): Upsell
     id,
     triggerProductId: String(data.triggerProductId ?? ""),
     triggerProductTitle: String(data.triggerProductTitle ?? ""),
+    triggerProductIds: Array.isArray(data.triggerProductIds)
+      ? data.triggerProductIds.map((value) => String(value ?? "")).filter(Boolean)
+      : [String(data.triggerProductId ?? "")].filter(Boolean),
+    triggerProductTitles: Array.isArray(data.triggerProductTitles)
+      ? data.triggerProductTitles.map((value) => String(value ?? "")).filter(Boolean)
+      : [String(data.triggerProductTitle ?? "")].filter(Boolean),
     upsellProducts: legacy.productId ? [legacy] : [],
     message: String(data.message ?? ""),
     createdAt: String(data.createdAt ?? ""),
@@ -74,6 +82,8 @@ export async function addUpsell(
   const ref = await addDoc(rulesCol(shop), {
     triggerProductId: rule.triggerProductId,
     triggerProductTitle: rule.triggerProductTitle,
+    triggerProductIds: rule.triggerProductIds,
+    triggerProductTitles: rule.triggerProductTitles,
     upsellProducts: rule.upsellProducts,
     message: rule.message,
     createdAt: serverTimestamp(),

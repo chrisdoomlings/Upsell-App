@@ -12,6 +12,8 @@ export interface UpsellRule {
   id: string;
   triggerProductId: string;
   triggerProductTitle: string;
+  triggerProductIds: string[];
+  triggerProductTitles: string[];
   upsellProducts: UpsellProduct[];
   message: string;
   enabled?: boolean;

@@ -29,7 +29,12 @@ export async function GET(req: NextRequest) {
     if (!session?.accessToken) return NextResponse.json({ upsells: [] }, { headers: CORS });
 
     const rules = await getShopUpsellRulesMetafield(shop!, session.accessToken);
-    const rule = rules.find((r) => String(r.triggerProductId) === String(productId));
+    const rule = rules.find((r) => {
+      const triggerIds = Array.isArray(r.triggerProductIds) && r.triggerProductIds.length
+        ? r.triggerProductIds
+        : [r.triggerProductId];
+      return triggerIds.some((id) => String(id) === String(productId));
+    });
     if (!rule) return NextResponse.json({ upsells: [] }, { headers: CORS });
 
     const upsells = (rule.upsellProducts || []).map((p) => ({

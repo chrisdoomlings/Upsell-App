@@ -15,6 +15,8 @@ export interface UpsellRule {
   id: string; // metaobject handle
   triggerProductId: string;
   triggerProductTitle: string;
+  triggerProductIds: string[];
+  triggerProductTitles: string[];
   upsellProducts: UpsellProduct[];
   message: string;
   enabled?: boolean;
@@ -55,6 +57,23 @@ function parseUpsellProducts(raw: string | null) {
   } catch {
     return [] as UpsellProduct[];
   }
+}
+
+function parseStringArray(raw: string | null) {
+  if (!raw) return [] as string[];
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.map((value) => String(value || "").trim()).filter(Boolean) : [];
+  } catch {
+    return [] as string[];
+  }
+}
+
+function summarizeTriggerTitles(triggerTitles: string[]) {
+  const titles = triggerTitles.map((title) => String(title || "").trim()).filter(Boolean);
+  if (!titles.length) return "";
+  if (titles.length === 1) return titles[0];
+  return `${titles[0]} +${titles.length - 1} more`;
 }
 
 type ProductSnapshot = {
@@ -118,10 +137,18 @@ async function loadProductSnapshots(shop: string, accessToken: string, productId
 }
 
 async function hydrateUpsellRule(shop: string, accessToken: string, rule: UpsellRule) {
-  const ids = [rule.triggerProductId, ...rule.upsellProducts.map((product) => product.productId)];
+  const triggerProductIds = Array.from(new Set(
+    (Array.isArray(rule.triggerProductIds) ? rule.triggerProductIds : [])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean),
+  ));
+  const ids = [...triggerProductIds, ...rule.upsellProducts.map((product) => product.productId)];
   const snapshots = await loadProductSnapshots(shop, accessToken, ids);
 
-  const triggerSnapshot = snapshots.get(rule.triggerProductId);
+  const hydratedTriggerTitles = triggerProductIds.map((id, index) => {
+    const existingTitle = Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles[index] : "";
+    return String(existingTitle || snapshots.get(id)?.title || "").trim();
+  }).filter(Boolean);
   const upsellProducts = rule.upsellProducts.map((product) => {
     const snapshot = snapshots.get(product.productId);
     return {
@@ -135,7 +162,10 @@ async function hydrateUpsellRule(shop: string, accessToken: string, rule: Upsell
 
   return {
     ...rule,
-    triggerProductTitle: rule.triggerProductTitle || triggerSnapshot?.title || "",
+    triggerProductId: triggerProductIds[0] ?? "",
+    triggerProductIds,
+    triggerProductTitles: hydratedTriggerTitles,
+    triggerProductTitle: summarizeTriggerTitles(hydratedTriggerTitles),
     upsellProducts,
   };
 }
@@ -166,12 +196,20 @@ export async function listUpsellRules(shop: string, accessToken: string, options
     if (!enabled && !options?.includeDisabled) continue;
 
     const triggerProductId = productIdFromGid(getFieldValue(n.fields, "trigger_product"));
-    if (!triggerProductId) continue;
+    const triggerProductIds = parseStringArray(getFieldValue(n.fields, "trigger_product_ids"));
+    const normalizedTriggerProductIds = Array.from(new Set([
+      ...triggerProductIds,
+      ...(triggerProductId ? [triggerProductId] : []),
+    ]));
+    if (!normalizedTriggerProductIds.length) continue;
+    const triggerProductTitles = parseStringArray(getFieldValue(n.fields, "trigger_product_titles"));
 
     rules.push({
       id: String(n.handle),
-      triggerProductId,
+      triggerProductId: normalizedTriggerProductIds[0] ?? "",
       triggerProductTitle: String(getFieldValue(n.fields, "trigger_product_title") ?? ""),
+      triggerProductIds: normalizedTriggerProductIds,
+      triggerProductTitles,
       message: String(getFieldValue(n.fields, "message") ?? ""),
       enabled,
       upsellProducts: parseUpsellProducts(getFieldValue(n.fields, "upsell_products")),
@@ -207,12 +245,19 @@ export async function getUpsellRule(shop: string, accessToken: string, handle: s
   if (!enabled && !options?.includeDisabled) return null;
 
   const triggerProductId = productIdFromGid(getFieldValue(mo.fields, "trigger_product"));
-  if (!triggerProductId) return null;
+  const triggerProductIds = parseStringArray(getFieldValue(mo.fields, "trigger_product_ids"));
+  const normalizedTriggerProductIds = Array.from(new Set([
+    ...triggerProductIds,
+    ...(triggerProductId ? [triggerProductId] : []),
+  ]));
+  if (!normalizedTriggerProductIds.length) return null;
 
   return hydrateUpsellRule(shop, accessToken, {
     id: String(mo.handle),
-    triggerProductId,
+    triggerProductId: normalizedTriggerProductIds[0] ?? "",
     triggerProductTitle: String(getFieldValue(mo.fields, "trigger_product_title") ?? ""),
+    triggerProductIds: normalizedTriggerProductIds,
+    triggerProductTitles: parseStringArray(getFieldValue(mo.fields, "trigger_product_titles")),
     message: String(getFieldValue(mo.fields, "message") ?? ""),
     enabled,
     upsellProducts: parseUpsellProducts(getFieldValue(mo.fields, "upsell_products")),
@@ -226,13 +271,26 @@ export async function upsertUpsellRule(
 ) {
   const type = await getUpsellType(shop, accessToken);
   const handle = rule.id && String(rule.id).trim() ? String(rule.id).trim() : `upsell-${Date.now()}`;
-  const triggerGid = productGidFromId(rule.triggerProductId);
+  const triggerProductIds = Array.from(new Set(
+    (Array.isArray(rule.triggerProductIds) ? rule.triggerProductIds : [rule.triggerProductId])
+      .map((id) => String(id || "").trim())
+      .filter(Boolean),
+  ));
+  const triggerProductTitles = Array.from(new Set(
+    (Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles : [rule.triggerProductTitle])
+      .map((title) => String(title || "").trim())
+      .filter(Boolean),
+  ));
+  const primaryTriggerProductId = triggerProductIds[0];
+  const triggerGid = productGidFromId(primaryTriggerProductId);
   if (!triggerGid) throw new Error("Missing trigger product id");
 
   const fields = [
     { key: "enabled", value: String(rule.enabled ?? true) },
     { key: "trigger_product", value: triggerGid },
-    { key: "trigger_product_title", value: rule.triggerProductTitle || "" },
+    { key: "trigger_product_title", value: summarizeTriggerTitles(triggerProductTitles) || rule.triggerProductTitle || "" },
+    { key: "trigger_product_ids", value: JSON.stringify(triggerProductIds) },
+    { key: "trigger_product_titles", value: JSON.stringify(triggerProductTitles) },
     { key: "message", value: rule.message || "" },
     { key: "upsell_products", value: JSON.stringify(rule.upsellProducts ?? []) },
   ];

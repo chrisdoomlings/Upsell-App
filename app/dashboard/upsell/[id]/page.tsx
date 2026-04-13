@@ -9,6 +9,7 @@ interface UpsellProduct { productId?: string; title: string; image: string; pric
 interface Rule {
   id: string;
   triggerProductTitle: string;
+  triggerProductTitles?: string[];
   upsellProducts: UpsellProduct[];
   message: string;
 }
@@ -95,7 +96,10 @@ export default function CampaignDetailPage() {
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: "#1a1a1a" }}>
           {rule.message || "Untitled campaign"}
         </h1>
-        <p style={{ margin: "0.25rem 0 0", color: "#6d7175", fontSize: "0.875rem" }}>{rule.triggerProductTitle} to {rule.upsellProducts.length} suggestion{rule.upsellProducts.length !== 1 ? "s" : ""}</p>
+        <p style={{ margin: "0.25rem 0 0", color: "#6d7175", fontSize: "0.875rem" }}>
+          {(rule.triggerProductTitles?.length ? `${rule.triggerProductTitles.length} trigger product${rule.triggerProductTitles.length === 1 ? "" : "s"}` : rule.triggerProductTitle)}
+          {" "}to {rule.upsellProducts.length} suggestion{rule.upsellProducts.length !== 1 ? "s" : ""}
+        </p>
       </div>
 
       {/* Campaign info card */}

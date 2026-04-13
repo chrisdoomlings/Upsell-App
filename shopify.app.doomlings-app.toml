@@ -42,6 +42,14 @@ required = true
 name = "Trigger product title"
 type = "single_line_text_field"
 
+[metaobjects.app.upsell_rule.fields.trigger_product_ids]
+name = "Trigger product ids"
+type = "json"
+
+[metaobjects.app.upsell_rule.fields.trigger_product_titles]
+name = "Trigger product titles"
+type = "json"
+
 [metaobjects.app.upsell_rule.fields.message]
 name = "Message"
 type = "single_line_text_field"

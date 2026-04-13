@@ -38,8 +38,23 @@ export async function POST(req: NextRequest) {
   } catch {
     return NextResponse.json({ error: "Invalid JSON body" }, { status: 400 });
   }
-  const { id, triggerProductId, triggerProductTitle, upsellProducts, message, enabled } = body as Record<string, unknown>;
-  if (!triggerProductId || !Array.isArray(upsellProducts) || upsellProducts.length === 0) {
+  const {
+    id,
+    triggerProductId,
+    triggerProductTitle,
+    triggerProductIds,
+    triggerProductTitles,
+    upsellProducts,
+    message,
+    enabled,
+  } = body as Record<string, unknown>;
+  const normalizedTriggerProductIds = Array.isArray(triggerProductIds)
+    ? triggerProductIds.map((value) => String(value || "").trim()).filter(Boolean)
+    : [String(triggerProductId || "").trim()].filter(Boolean);
+  const normalizedTriggerProductTitles = Array.isArray(triggerProductTitles)
+    ? triggerProductTitles.map((value) => String(value || "").trim()).filter(Boolean)
+    : [String(triggerProductTitle || "").trim()].filter(Boolean);
+  if (!normalizedTriggerProductIds.length || !Array.isArray(upsellProducts) || upsellProducts.length === 0) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 });
   }
 
@@ -47,8 +62,10 @@ export async function POST(req: NextRequest) {
   try {
     result = await upsertUpsellRule(shop, accessToken, {
       id: id as string | undefined,
-      triggerProductId: triggerProductId as string,
-      triggerProductTitle: (triggerProductTitle as string) || "",
+      triggerProductId: normalizedTriggerProductIds[0],
+      triggerProductTitle: normalizedTriggerProductTitles[0] || "",
+      triggerProductIds: normalizedTriggerProductIds,
+      triggerProductTitles: normalizedTriggerProductTitles,
       upsellProducts: upsellProducts as never,
       message: (message as string) || "",
       enabled: enabled !== false,

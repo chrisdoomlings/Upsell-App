@@ -34,6 +34,12 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     id: params.id,
     triggerProductId: (body.triggerProductId as string) ?? current.triggerProductId,
     triggerProductTitle: (body.triggerProductTitle as string) ?? current.triggerProductTitle,
+    triggerProductIds: Array.isArray(body.triggerProductIds)
+      ? body.triggerProductIds.map((value) => String(value || "").trim()).filter(Boolean)
+      : current.triggerProductIds,
+    triggerProductTitles: Array.isArray(body.triggerProductTitles)
+      ? body.triggerProductTitles.map((value) => String(value || "").trim()).filter(Boolean)
+      : current.triggerProductTitles,
     upsellProducts: Array.isArray(body.upsellProducts) ? body.upsellProducts as never : current.upsellProducts,
     message: (body.message as string) ?? current.message,
     enabled: typeof body.enabled === "boolean" ? body.enabled : current.enabled !== false,
