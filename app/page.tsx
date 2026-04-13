@@ -6,7 +6,7 @@ import { Suspense } from "react";
 import EmbeddedStandaloneLink from "@/components/EmbeddedStandaloneLink";
 
 function LoginForm() {
-  const DEFAULT_SHOP = "upsellertheme.myshopify.com";
+  const DEFAULT_SHOP = "doomlings-dev.myshopify.com";
   const [shop, setShop] = useState(DEFAULT_SHOP);
   const params = useSearchParams();
   const error = params.get("error");
