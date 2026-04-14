@@ -405,20 +405,26 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
             </div>
 
             <div style={{ display: "grid", gap: "0.5rem", maxWidth: 520, marginBottom: "1.5rem" }}>
-              {triggerProductIds.map((triggerId, i) => (
-                <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
-                  <SearchableProductSelect
-                    products={products}
-                    value={triggerId}
-                    onChange={(v) => updateTriggerProduct(i, v)}
-                    placeholder={`Search trigger product ${i + 1}`}
-                    style={{ flex: 1 }}
-                  />
-                  {triggerProductIds.length > 1 && (
-                    <button onClick={() => removeTriggerProduct(i)} style={{ border: "none", background: "none", color: "#c0392b", fontSize: "1rem", cursor: "pointer", flexShrink: 0, padding: "0.1rem 0.3rem" }}>×</button>
-                  )}
-                </div>
-              ))}
+              {triggerProductIds.map((triggerId, i) => {
+                const otherSelected = new Set(
+                  triggerProductIds.filter((_, idx) => idx !== i).map((id) => id.trim()).filter(Boolean)
+                );
+                const availableProducts = products.filter((p) => !otherSelected.has(String(p.id)));
+                return (
+                  <div key={i} style={{ display: "flex", alignItems: "center", gap: "0.55rem" }}>
+                    <SearchableProductSelect
+                      products={availableProducts}
+                      value={triggerId}
+                      onChange={(v) => updateTriggerProduct(i, v)}
+                      placeholder={`Search trigger product ${i + 1}`}
+                      style={{ flex: 1 }}
+                    />
+                    {triggerProductIds.length > 1 && (
+                      <button onClick={() => removeTriggerProduct(i)} style={{ border: "none", background: "none", color: "#c0392b", fontSize: "1rem", cursor: "pointer", flexShrink: 0, padding: "0.1rem 0.3rem" }}>×</button>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div style={{ display: "flex", alignItems: "center", gap: "0.75rem", flexWrap: "wrap" }}>
@@ -492,7 +498,7 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid #e4e5e7" }}>
-                {["Campaign", "Trigger products", "Suggestions", "Status", "Actions", "Stats", ""].map((h, i) => (
+                {["Campaign", "Trigger products", "Suggestions", ""].map((h, i) => (
                   <th key={i} style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.8rem", fontWeight: 600, color: "#6d7175", textTransform: "uppercase" }}>{h}</th>
                 ))}
               </tr>
@@ -510,30 +516,57 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
                     <ProductCarousel products={rule.upsellProducts} storefrontUrlForProduct={storefrontUrlForProduct} />
                   </td>
                   <td style={{ padding: "0.85rem 1rem" }}>
-                    <button
-                      onClick={() => void handleToggleEnabled(rule)}
-                      style={{
-                        padding: "0.28rem 0.72rem",
-                        background: rule.enabled === false ? "#fff7ed" : "#ecfdf5",
-                        color: rule.enabled === false ? "#c2410c" : "#047857",
-                        border: `1px solid ${rule.enabled === false ? "#fed7aa" : "#a7f3d0"}`,
-                        borderRadius: "999px", fontSize: "0.76rem", fontWeight: 700, cursor: "pointer",
-                      }}
-                    >
-                      {rule.enabled === false ? "Paused" : "Active"}
-                    </button>
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", flexWrap: "wrap" }}>
-                      <button onClick={() => handleEdit(rule)} style={{ padding: "0.3rem 0.75rem", background: "#fff", color: "#374151", border: "1px solid #d1d5db", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}>Edit</button>
-                      <button onClick={() => handleDuplicate(rule)} style={{ padding: "0.3rem 0.75rem", background: "#fff", color: "#1d4ed8", border: "1px solid #bfdbfe", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}>Duplicate</button>
+                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                      {/* Status toggle */}
+                      <button
+                        title={rule.enabled === false ? "Resume campaign" : "Pause campaign"}
+                        onClick={() => void handleToggleEnabled(rule)}
+                        style={{
+                          width: 30, height: 30, border: "none", borderRadius: "7px", cursor: "pointer", padding: 0,
+                          display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                          background: rule.enabled === false ? "#fff7ed" : "#ecfdf5",
+                          color: rule.enabled === false ? "#c2410c" : "#047857",
+                        }}
+                      >
+                        {rule.enabled === false ? (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        ) : (
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                        )}
+                      </button>
+                      {/* Edit */}
+                      <button
+                        title="Edit campaign"
+                        onClick={() => handleEdit(rule)}
+                        style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                      </button>
+                      {/* Duplicate */}
+                      <button
+                        title="Duplicate campaign"
+                        onClick={() => handleDuplicate(rule)}
+                        style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                      </button>
+                      {/* View Stats */}
+                      <button
+                        title="View stats"
+                        onClick={() => router.push(`/dashboard/upsell/${rule.id}`)}
+                        style={{ width: 30, height: 30, border: "1px solid #b7dfce", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#f0faf7", color: "#008060" }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                      </button>
+                      {/* Delete */}
+                      <button
+                        title="Delete campaign"
+                        onClick={() => handleDelete(rule.id)}
+                        style={{ width: 30, height: 30, border: "1px solid #fecaca", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#c0392b" }}
+                      >
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                      </button>
                     </div>
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <button onClick={() => router.push(`/dashboard/upsell/${rule.id}`)} style={{ padding: "0.3rem 0.75rem", background: "#f0faf7", color: "#008060", border: "1px solid #b7dfce", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}>View Stats</button>
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <button onClick={() => handleDelete(rule.id)} style={{ padding: "0.3rem 0.75rem", background: "#fff", color: "#c0392b", border: "1px solid #ffd2d2", borderRadius: "6px", fontSize: "0.8rem", cursor: "pointer" }}>Delete</button>
                   </td>
                 </tr>
               ))}

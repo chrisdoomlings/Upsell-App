@@ -44,6 +44,8 @@ export function SearchableProductSelect({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const rootRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const [dropdownPos, setDropdownPos] = useState<{ top: number; left: number; width: number } | null>(null);
 
   const selectedProduct = products.find((product) => String(product.id) === value) ?? null;
 
@@ -58,10 +60,25 @@ export function SearchableProductSelect({
         setQuery(selectedProduct?.title ?? "");
       }
     };
-
     document.addEventListener("mousedown", handlePointerDown);
     return () => document.removeEventListener("mousedown", handlePointerDown);
   }, [selectedProduct?.title]);
+
+  // Close on scroll so the fixed dropdown doesn't detach from the input
+  useEffect(() => {
+    if (!open) return;
+    const close = () => setOpen(false);
+    window.addEventListener("scroll", close, { passive: true, capture: true });
+    return () => window.removeEventListener("scroll", close, { capture: true });
+  }, [open]);
+
+  const openDropdown = () => {
+    if (inputRef.current) {
+      const rect = inputRef.current.getBoundingClientRect();
+      setDropdownPos({ top: rect.bottom + 6, left: rect.left, width: rect.width });
+    }
+    setOpen(true);
+  };
 
   const normalizedQuery = query.trim().toLowerCase();
   const filteredProducts = normalizedQuery
@@ -75,17 +92,16 @@ export function SearchableProductSelect({
   return (
     <div ref={rootRef} style={{ position: "relative", ...style }}>
       <input
+        ref={inputRef}
         type="text"
         value={query}
         placeholder={placeholder}
-        onFocus={() => setOpen(true)}
+        onFocus={openDropdown}
         onChange={(event) => {
           const nextValue = event.target.value;
           setQuery(nextValue);
-          setOpen(true);
-          if (!nextValue.trim()) {
-            onChange("");
-          }
+          openDropdown();
+          if (!nextValue.trim()) onChange("");
         }}
         style={{
           width: "100%",
@@ -95,22 +111,23 @@ export function SearchableProductSelect({
           fontSize: "0.875rem",
           background: "#fff",
           color: "#1a1a1a",
+          boxSizing: "border-box",
         }}
       />
-      {open && (
+      {open && dropdownPos && (
         <div
           style={{
-            position: "absolute",
-            top: "calc(100% + 0.35rem)",
-            left: 0,
-            right: 0,
+            position: "fixed",
+            top: dropdownPos.top,
+            left: dropdownPos.left,
+            width: dropdownPos.width,
             background: "#fff",
             border: "1px solid #d1d5db",
             borderRadius: "10px",
-            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.08)",
+            boxShadow: "0 10px 24px rgba(15, 23, 42, 0.12)",
             maxHeight: "280px",
             overflowY: "auto",
-            zIndex: 30,
+            zIndex: 9999,
           }}
         >
           {visibleProducts.length === 0 ? (
@@ -133,7 +150,7 @@ export function SearchableProductSelect({
                   style={{
                     width: "100%",
                     border: "none",
-                    background: isSelected ? "#f3f4f6" : "#fff",
+                    background: isSelected ? "#f0fdf4" : "#fff",
                     padding: "0.72rem 0.85rem",
                     textAlign: "left",
                     cursor: "pointer",
