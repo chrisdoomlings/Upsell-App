@@ -1,5 +1,5 @@
 import { shopifyAdminGraphql } from "@/lib/shopify/adminGraphql";
-import { resolveMetaobjectType } from "@/lib/shopify/metaobjectType";
+import { getDb } from "@/lib/supabase/client";
 
 export interface UpsellProduct {
   productId: string;
@@ -12,7 +12,7 @@ export interface UpsellProduct {
 }
 
 export interface UpsellRule {
-  id: string; // metaobject handle
+  id: string;
   triggerProductId: string;
   triggerProductTitle: string;
   triggerProductIds: string[];
@@ -22,13 +22,9 @@ export interface UpsellRule {
   enabled?: boolean;
 }
 
-const TYPE = "$app:upsell_rule";
-const DEFINITION_NAME = "Upsell rule";
-
-async function getUpsellType(shop: string, accessToken: string) {
-  const resolved = await resolveMetaobjectType(shop, accessToken, TYPE, DEFINITION_NAME);
-  return resolved.type;
-}
+// ---------------------------------------------------------------------------
+// Product hydration (still fetches live data from Shopify)
+// ---------------------------------------------------------------------------
 
 function productGidFromId(productId: string) {
   const id = String(productId || "").trim();
@@ -43,34 +39,8 @@ function productIdFromGid(gid: string | null | undefined) {
   return m ? m[1] : null;
 }
 
-function getFieldValue(fields: Array<{ key: string; value: string }> | null | undefined, key: string) {
-  if (!fields) return null;
-  const f = fields.find((x) => x && x.key === key);
-  return f ? f.value : null;
-}
-
-function parseUpsellProducts(raw: string | null) {
-  if (!raw) return [] as UpsellProduct[];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? (parsed as UpsellProduct[]) : [];
-  } catch {
-    return [] as UpsellProduct[];
-  }
-}
-
-function parseStringArray(raw: string | null) {
-  if (!raw) return [] as string[];
-  try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed.map((value) => String(value || "").trim()).filter(Boolean) : [];
-  } catch {
-    return [] as string[];
-  }
-}
-
 function summarizeTriggerTitles(triggerTitles: string[]) {
-  const titles = triggerTitles.map((title) => String(title || "").trim()).filter(Boolean);
+  const titles = triggerTitles.map((t) => String(t || "").trim()).filter(Boolean);
   if (!titles.length) return "";
   if (titles.length === 1) return titles[0];
   return `${titles[0]} +${titles.length - 1} more`;
@@ -88,10 +58,7 @@ async function loadProductSnapshots(shop: string, accessToken: string, productId
   const uniqueIds = Array.from(new Set(productIds.map((id) => String(id || "").trim()).filter(Boolean)));
   if (!uniqueIds.length) return new Map<string, ProductSnapshot>();
 
-  const gids = uniqueIds
-    .map((id) => productGidFromId(id))
-    .filter((gid): gid is string => Boolean(gid));
-
+  const gids = uniqueIds.map(productGidFromId).filter((g): g is string => Boolean(g));
   if (!gids.length) return new Map<string, ProductSnapshot>();
 
   const data = await shopifyAdminGraphql(
@@ -104,14 +71,8 @@ async function loadProductSnapshots(shop: string, accessToken: string, productId
             id
             title
             handle
-            featuredImage {
-              url
-            }
-            variants(first: 1) {
-              nodes {
-                price
-              }
-            }
+            featuredImage { url }
+            variants(first: 1) { nodes { price } }
           }
         }
       }
@@ -132,31 +93,29 @@ async function loadProductSnapshots(shop: string, accessToken: string, productId
       price: String(node?.variants?.nodes?.[0]?.price ?? ""),
     });
   }
-
   return snapshots;
 }
 
-async function hydrateUpsellRule(shop: string, accessToken: string, rule: UpsellRule) {
-  const triggerProductIds = Array.from(new Set(
-    (Array.isArray(rule.triggerProductIds) ? rule.triggerProductIds : [])
-      .map((id) => String(id || "").trim())
-      .filter(Boolean),
-  ));
-  const ids = [...triggerProductIds, ...rule.upsellProducts.map((product) => product.productId)];
+async function hydrateUpsellRule(shop: string, accessToken: string, rule: UpsellRule): Promise<UpsellRule> {
+  const triggerProductIds = Array.from(
+    new Set((rule.triggerProductIds ?? []).map((id) => String(id || "").trim()).filter(Boolean)),
+  );
+  const ids = [...triggerProductIds, ...rule.upsellProducts.map((p) => p.productId)];
   const snapshots = await loadProductSnapshots(shop, accessToken, ids);
 
   const hydratedTriggerTitles = triggerProductIds.map((id, index) => {
-    const existingTitle = Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles[index] : "";
-    return String(existingTitle || snapshots.get(id)?.title || "").trim();
+    const existing = Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles[index] : "";
+    return String(existing || snapshots.get(id)?.title || "").trim();
   }).filter(Boolean);
-  const upsellProducts = rule.upsellProducts.map((product) => {
-    const snapshot = snapshots.get(product.productId);
+
+  const upsellProducts = rule.upsellProducts.map((p) => {
+    const snap = snapshots.get(p.productId);
     return {
-      ...product,
-      title: product.title || snapshot?.title || "",
-      image: product.image || snapshot?.image || "",
-      price: product.price || snapshot?.price || "",
-      handle: product.handle || snapshot?.handle || "",
+      ...p,
+      title: p.title || snap?.title || "",
+      image: p.image || snap?.image || "",
+      price: p.price || snap?.price || "",
+      handle: p.handle || snap?.handle || "",
     };
   });
 
@@ -170,189 +129,119 @@ async function hydrateUpsellRule(shop: string, accessToken: string, rule: Upsell
   };
 }
 
-export async function listUpsellRules(shop: string, accessToken: string, options?: { includeDisabled?: boolean }): Promise<UpsellRule[]> {
-  const type = await getUpsellType(shop, accessToken);
-  const data = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query UpsellRules($type: String!) {
-        metaobjects(type: $type, first: 250) {
-          nodes {
-            id
-            handle
-            fields { key value }
-          }
-        }
-      }
-    `,
-    { type },
-  );
+// ---------------------------------------------------------------------------
+// Row → UpsellRule
+// ---------------------------------------------------------------------------
 
-  const nodes = data?.data?.metaobjects?.nodes ?? [];
-  const rules: UpsellRule[] = [];
-  for (const n of nodes) {
-    const enabled = String(getFieldValue(n.fields, "enabled") ?? "true") === "true";
-    if (!enabled && !options?.includeDisabled) continue;
+function rowToRule(row: Record<string, unknown>): UpsellRule {
+  const triggerProductIds = Array.isArray(row.trigger_product_ids)
+    ? (row.trigger_product_ids as unknown[]).map(String)
+    : [];
+  const triggerProductTitles = Array.isArray(row.trigger_product_titles)
+    ? (row.trigger_product_titles as unknown[]).map(String)
+    : [];
+  const upsellProducts = Array.isArray(row.upsell_products)
+    ? (row.upsell_products as UpsellProduct[])
+    : [];
 
-    const triggerProductId = productIdFromGid(getFieldValue(n.fields, "trigger_product"));
-    const triggerProductIds = parseStringArray(getFieldValue(n.fields, "trigger_product_ids"));
-    const normalizedTriggerProductIds = Array.from(new Set([
-      ...triggerProductIds,
-      ...(triggerProductId ? [triggerProductId] : []),
-    ]));
-    if (!normalizedTriggerProductIds.length) continue;
-    const triggerProductTitles = parseStringArray(getFieldValue(n.fields, "trigger_product_titles"));
+  return {
+    id: String(row.id),
+    triggerProductId: triggerProductIds[0] ?? "",
+    triggerProductTitle: "",
+    triggerProductIds,
+    triggerProductTitles,
+    upsellProducts,
+    message: String(row.message ?? ""),
+    enabled: Boolean(row.enabled),
+  };
+}
 
-    rules.push({
-      id: String(n.handle),
-      triggerProductId: normalizedTriggerProductIds[0] ?? "",
-      triggerProductTitle: String(getFieldValue(n.fields, "trigger_product_title") ?? ""),
-      triggerProductIds: normalizedTriggerProductIds,
-      triggerProductTitles,
-      message: String(getFieldValue(n.fields, "message") ?? ""),
-      enabled,
-      upsellProducts: parseUpsellProducts(getFieldValue(n.fields, "upsell_products")),
-    });
-  }
+// ---------------------------------------------------------------------------
+// Public API — same signatures as before, API routes unchanged
+// ---------------------------------------------------------------------------
+
+export async function listUpsellRules(
+  shop: string,
+  accessToken: string,
+  options?: { includeDisabled?: boolean },
+): Promise<UpsellRule[]> {
+  const db = getDb();
+  const rows = options?.includeDisabled
+    ? await db`SELECT * FROM upsell_rules WHERE shop = ${shop} ORDER BY created_at ASC`
+    : await db`SELECT * FROM upsell_rules WHERE shop = ${shop} AND enabled = true ORDER BY created_at ASC`;
+
+  const rules = rows.map((r) => rowToRule(r as Record<string, unknown>));
   return Promise.all(rules.map((rule) => hydrateUpsellRule(shop, accessToken, rule)));
 }
 
-export async function getUpsellRule(shop: string, accessToken: string, handle: string, options?: { includeDisabled?: boolean }): Promise<UpsellRule | null> {
-  const h = String(handle || "").trim();
+export async function getUpsellRule(
+  shop: string,
+  accessToken: string,
+  id: string,
+  options?: { includeDisabled?: boolean },
+): Promise<UpsellRule | null> {
+  const h = String(id || "").trim();
   if (!h) return null;
-  const type = await getUpsellType(shop, accessToken);
 
-  const data = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query UpsellRuleByHandle($type: String!, $handle: String!) {
-        metaobjectByHandle(handle: { type: $type, handle: $handle }) {
-          id
-          handle
-          fields { key value }
-        }
-      }
-    `,
-    { type, handle: h },
-  );
+  const db = getDb();
+  const rows = options?.includeDisabled
+    ? await db`SELECT * FROM upsell_rules WHERE shop = ${shop} AND id = ${h}`
+    : await db`SELECT * FROM upsell_rules WHERE shop = ${shop} AND id = ${h} AND enabled = true`;
 
-  const mo = data?.data?.metaobjectByHandle;
-  if (!mo?.handle) return null;
-
-  const enabled = String(getFieldValue(mo.fields, "enabled") ?? "true") === "true";
-  if (!enabled && !options?.includeDisabled) return null;
-
-  const triggerProductId = productIdFromGid(getFieldValue(mo.fields, "trigger_product"));
-  const triggerProductIds = parseStringArray(getFieldValue(mo.fields, "trigger_product_ids"));
-  const normalizedTriggerProductIds = Array.from(new Set([
-    ...triggerProductIds,
-    ...(triggerProductId ? [triggerProductId] : []),
-  ]));
-  if (!normalizedTriggerProductIds.length) return null;
-
-  return hydrateUpsellRule(shop, accessToken, {
-    id: String(mo.handle),
-    triggerProductId: normalizedTriggerProductIds[0] ?? "",
-    triggerProductTitle: String(getFieldValue(mo.fields, "trigger_product_title") ?? ""),
-    triggerProductIds: normalizedTriggerProductIds,
-    triggerProductTitles: parseStringArray(getFieldValue(mo.fields, "trigger_product_titles")),
-    message: String(getFieldValue(mo.fields, "message") ?? ""),
-    enabled,
-    upsellProducts: parseUpsellProducts(getFieldValue(mo.fields, "upsell_products")),
-  });
+  if (!rows.length) return null;
+  return hydrateUpsellRule(shop, accessToken, rowToRule(rows[0] as Record<string, unknown>));
 }
 
 export async function upsertUpsellRule(
   shop: string,
   accessToken: string,
   rule: Omit<UpsellRule, "id"> & { id?: string },
-) {
-  const type = await getUpsellType(shop, accessToken);
-  const handle = rule.id && String(rule.id).trim() ? String(rule.id).trim() : `upsell-${Date.now()}`;
-  const triggerProductIds = Array.from(new Set(
-    (Array.isArray(rule.triggerProductIds) ? rule.triggerProductIds : [rule.triggerProductId])
-      .map((id) => String(id || "").trim())
-      .filter(Boolean),
-  ));
-  const triggerProductTitles = Array.from(new Set(
-    (Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles : [rule.triggerProductTitle])
-      .map((title) => String(title || "").trim())
-      .filter(Boolean),
-  ));
-  const primaryTriggerProductId = triggerProductIds[0];
-  const triggerGid = productGidFromId(primaryTriggerProductId);
-  if (!triggerGid) throw new Error("Missing trigger product id");
-
-  const fields = [
-    { key: "enabled", value: String(rule.enabled ?? true) },
-    { key: "trigger_product", value: triggerGid },
-    { key: "trigger_product_title", value: summarizeTriggerTitles(triggerProductTitles) || rule.triggerProductTitle || "" },
-    { key: "trigger_product_ids", value: JSON.stringify(triggerProductIds) },
-    { key: "trigger_product_titles", value: JSON.stringify(triggerProductTitles) },
-    { key: "message", value: rule.message || "" },
-    { key: "upsell_products", value: JSON.stringify(rule.upsellProducts ?? []) },
-  ];
-
-  const res = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation UpsertUpsellRule($type: String!, $handle: String!, $fields: [MetaobjectFieldInput!]!) {
-        metaobjectUpsert(
-          handle: { type: $type, handle: $handle }
-          metaobject: { fields: $fields }
-        ) {
-          metaobject { id handle }
-          userErrors { field message }
-        }
-      }
-    `,
-    { type, handle, fields },
+): Promise<{ id: string }> {
+  const id = rule.id?.trim() || `upsell-${Date.now()}`;
+  const triggerProductIds = Array.from(
+    new Set(
+      (Array.isArray(rule.triggerProductIds) ? rule.triggerProductIds : [rule.triggerProductId])
+        .map((v) => String(v || "").trim())
+        .filter(Boolean),
+    ),
+  );
+  const triggerProductTitles = Array.from(
+    new Set(
+      (Array.isArray(rule.triggerProductTitles) ? rule.triggerProductTitles : [rule.triggerProductTitle])
+        .map((v) => String(v || "").trim())
+        .filter(Boolean),
+    ),
   );
 
-  const userErrors = res?.data?.metaobjectUpsert?.userErrors ?? [];
-  if (Array.isArray(userErrors) && userErrors.length > 0) {
-    throw new Error(userErrors[0]?.message ?? "Failed to save upsell rule");
-  }
+  if (!triggerProductIds.length) throw new Error("Missing trigger product id");
 
-  return { id: res?.data?.metaobjectUpsert?.metaobject?.handle ?? handle };
+  const db = getDb();
+  await db`
+    INSERT INTO upsell_rules
+      (id, shop, trigger_product_ids, trigger_product_titles, upsell_products, message, enabled, updated_at)
+    VALUES (
+      ${id},
+      ${shop},
+      ${triggerProductIds},
+      ${triggerProductTitles},
+      ${db.json(rule.upsellProducts ?? [])},
+      ${rule.message || ""},
+      ${rule.enabled !== false},
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      trigger_product_ids  = EXCLUDED.trigger_product_ids,
+      trigger_product_titles = EXCLUDED.trigger_product_titles,
+      upsell_products      = EXCLUDED.upsell_products,
+      message              = EXCLUDED.message,
+      enabled              = EXCLUDED.enabled,
+      updated_at           = NOW()
+  `;
+
+  return { id };
 }
 
-export async function deleteUpsellRule(shop: string, accessToken: string, handle: string) {
-  const type = await getUpsellType(shop, accessToken);
-  const data = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query UpsellRuleId($type: String!, $handle: String!) {
-        metaobjectByHandle(handle: { type: $type, handle: $handle }) { id }
-      }
-    `,
-    { type, handle },
-  );
-
-  const id = data?.data?.metaobjectByHandle?.id as string | undefined;
-  if (!id) return;
-
-  const res = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation DeleteUpsellRule($id: ID!) {
-        metaobjectDelete(id: $id) {
-          deletedId
-          userErrors { field message }
-        }
-      }
-    `,
-    { id },
-  );
-
-  const userErrors = res?.data?.metaobjectDelete?.userErrors ?? [];
-  if (Array.isArray(userErrors) && userErrors.length > 0) {
-    throw new Error(userErrors[0]?.message ?? "Failed to delete upsell rule");
-  }
+export async function deleteUpsellRule(shop: string, _accessToken: string, id: string): Promise<void> {
+  const db = getDb();
+  await db`DELETE FROM upsell_rules WHERE shop = ${shop} AND id = ${id}`;
 }
-
