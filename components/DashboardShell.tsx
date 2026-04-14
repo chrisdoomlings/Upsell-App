@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
-import { LATEST_VERSION_ENTRY } from "@/lib/versionHistory";
+import { DEFAULT_LATEST_VERSION_ENTRY, type VersionHistoryEntry } from "@/lib/versionHistory";
 
 const TABS = [
   {
@@ -164,6 +164,7 @@ export default function DashboardShell({
   const pathname = usePathname();
   const [isMobile, setIsMobile] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [latestVersionEntry, setLatestVersionEntry] = useState<VersionHistoryEntry>(DEFAULT_LATEST_VERSION_ENTRY);
 
   const tabFromPath = (pathname.split("/")[2] ?? "overview") as TabKey;
   const tab = activeTab ?? (TABS.some((t) => t.key === tabFromPath) ? tabFromPath : "overview");
@@ -181,6 +182,35 @@ export default function DashboardShell({
     updateViewport();
     media.addEventListener("change", updateViewport);
     return () => media.removeEventListener("change", updateViewport);
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+
+    fetch("/api/standalone/version-history", { cache: "no-store" })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        return response.json() as Promise<{ latestEntry?: VersionHistoryEntry }>;
+      })
+      .then((data) => {
+        if (!active || !data?.latestEntry) return;
+        setLatestVersionEntry(data.latestEntry);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleLatestVersionChanged = (event: Event) => {
+      const nextEntry = (event as CustomEvent<VersionHistoryEntry>).detail;
+      if (nextEntry) setLatestVersionEntry(nextEntry);
+    };
+
+    window.addEventListener("version-history:latest-changed", handleLatestVersionChanged);
+    return () => window.removeEventListener("version-history:latest-changed", handleLatestVersionChanged);
   }, []);
 
   const handleNavigate = (nextTab: TabKey) => {
@@ -410,7 +440,7 @@ export default function DashboardShell({
               {TABS.find((t) => t.key === tab)?.label ?? "Dashboard"}
             </p>
             <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
-              Updated {LATEST_VERSION_ENTRY.releasedOn} · {LATEST_VERSION_ENTRY.version}
+              Updated {latestVersionEntry.releasedOn} · {latestVersionEntry.version}
             </span>
           </div>
 
