@@ -257,22 +257,22 @@ export default function PostPurchaseTab() {
   return (
     <PolarisProvider>
       <>
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "2rem", paddingTop: "0.5rem" }}>
           <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: "#1a1a1a" }}>Post-Purchase</h1>
-          <p style={{ margin: "0.25rem 0 0", color: "#6d7175", fontSize: "0.875rem" }}>
+          <p style={{ margin: "0.35rem 0 0", color: "#6d7175", fontSize: "0.875rem" }}>
             Build one-click offers for the moment right after checkout, with targeting, discounting, and offer stats in one place.
           </p>
         </div>
 
         {error && (
-          <div style={{ marginBottom: "1rem" }}>
+          <div style={{ marginBottom: "1.25rem" }}>
             <Card>
               <Text as="p" tone="critical">{error}</Text>
             </Card>
           </div>
         )}
 
-        <div style={{ marginBottom: "1.5rem" }}>
+        <div style={{ marginBottom: "2rem" }}>
           <Card>
             <BlockStack gap="500">
               <div style={{ display: "flex", alignItems: isMobile ? "flex-start" : "flex-start", justifyContent: "space-between", gap: "0.9rem", flexWrap: "wrap" }}>
@@ -406,7 +406,7 @@ export default function PostPurchaseTab() {
         </div>
 
         {summary && (
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "1.5rem" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "1rem", marginBottom: "2rem" }}>
             {[
               { label: "Active offers", value: summary.activeOffers, sub: "Available in the current setup" },
               { label: "Offer views", value: summary.totalViews, sub: "Rendered after checkout" },
@@ -414,7 +414,7 @@ export default function PostPurchaseTab() {
               { label: "Conversion", value: summary.conversionRate, sub: "Views to accepted" },
               { label: "Revenue", value: fmt(summary.totalRevenue, "USD"), sub: "Tracked post-purchase sales" },
             ].map((card) => (
-              <div key={card.label} style={{ background: "#fff", borderRadius: "12px", padding: "1rem 1.15rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              <div key={card.label} style={{ background: "#fff", borderRadius: "12px", padding: "1.25rem 1.35rem", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
                 <p style={{ margin: 0, fontSize: "0.74rem", color: "#6d7175", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.04em" }}>{card.label}</p>
                 <p style={{ margin: "0.35rem 0 0.15rem", fontSize: "1.5rem", fontWeight: 700, color: "#0f172a" }}>{card.value}</p>
                 <p style={{ margin: 0, fontSize: "0.76rem", color: "#6d7175" }}>{card.sub}</p>
@@ -423,7 +423,7 @@ export default function PostPurchaseTab() {
           </div>
         )}
 
-        <div style={{ background: "#fff", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: "1.5rem" }}>
+        <div style={{ background: "#fff", borderRadius: "12px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden", marginBottom: "2rem" }}>
           <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e5e7eb" }}>
             <p style={{ margin: 0, fontWeight: 700, color: "#111827" }}>Configured offers</p>
           </div>
