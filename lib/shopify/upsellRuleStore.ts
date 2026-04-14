@@ -224,7 +224,7 @@ export async function upsertUpsellRule(
       ${shop},
       ${triggerProductIds},
       ${triggerProductTitles},
-      ${db.json(rule.upsellProducts ?? [])},
+      ${db.json(JSON.parse(JSON.stringify(rule.upsellProducts ?? [])))},
       ${rule.message || ""},
       ${rule.enabled !== false},
       NOW()
