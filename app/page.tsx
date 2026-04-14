@@ -13,6 +13,7 @@ function LoginForm() {
 
   useEffect(() => {
     if (error) return;
+    if (params.get("embedded") === "1") return; // Let EmbeddedStandaloneLink handle it
     // Fast path: if a valid session cookie already exists, skip OAuth entirely
     fetch("/api/standalone/me")
       .then((res) => {
@@ -25,7 +26,7 @@ function LoginForm() {
       .catch(() => {
         window.location.href = `/standalone/auth?shop=${DEFAULT_SHOP}`;
       });
-  }, [error]);
+  }, [error, params]);
   const embedded = params.get("embedded");
   const shopParam = params.get("shop");
   const discountIntent = Array.from(params.entries()).some(([key, value]) =>
