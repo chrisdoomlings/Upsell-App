@@ -69,14 +69,18 @@ function cartLinesDiscountsGenerateRun(input) {
     const candidates = [];
     for (const rule of bxgyRules) {
       const buyVariantIds = Array.isArray(rule?.buyVariantIds) ? rule.buyVariantIds : [];
+      const appliesToAnyProduct = rule?.appliesToAnyProduct === true;
       const giftVariantId = String(rule?.giftVariantId ?? "");
       const buyQuantity = Math.max(Number(rule?.buyQuantity) || 1, 1);
       const giftQuantity = Math.max(Number(rule?.giftQuantity) || 1, 1);
       const limitOneGiftPerOrder = rule?.limitOneGiftPerOrder === true;
       const ruleId = String(rule?.ruleId ?? "");
-      if (!buyVariantIds.length || !giftVariantId || !ruleId) continue;
+      if (!appliesToAnyProduct && !buyVariantIds.length || !giftVariantId || !ruleId) continue;
       const qualifyingQty = input.cart.lines.reduce((sum, line) => {
         if (line.attribute?.value === "true") return sum;
+        if (appliesToAnyProduct) {
+          return line.merchandise?.id === giftVariantId ? sum : sum + (line.quantity || 0);
+        }
         return buyVariantIds.includes(line.merchandise?.id) ? sum + (line.quantity || 0) : sum;
       }, 0);
       const eligibleGiftQty = limitOneGiftPerOrder ? qualifyingQty >= buyQuantity ? giftQuantity : 0 : Math.floor(qualifyingQty / buyQuantity) * giftQuantity;
