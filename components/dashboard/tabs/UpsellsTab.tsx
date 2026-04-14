@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import FeatureHelpCard from "@/components/dashboard/FeatureHelpCard";
 import { type Product, SearchableProductSelect } from "../products";
 import type { UpsellProduct, UpsellRule, RuleStat } from "../types/upsell";
 
@@ -65,6 +64,7 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<"rules" | "stats" | "help">("rules");
 
   // Wizard state
   const [step, setStep] = useState<1 | 2>(1);
@@ -479,180 +479,231 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
     );
   };
 
+  // ── Sub-nav tab style ────────────────────────────────────────────────────────
+
+  const subNavBtn = (key: typeof subTab, label: string) => {
+    const active = subTab === key;
+    return (
+      <button
+        key={key}
+        onClick={() => setSubTab(key)}
+        style={{
+          padding: "0.45rem 1rem",
+          border: "none",
+          borderBottom: active ? "2px solid #008060" : "2px solid transparent",
+          background: "none",
+          color: active ? "#008060" : "#6b7280",
+          fontWeight: active ? 600 : 400,
+          fontSize: "0.875rem",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
     <>
-      <div style={{ marginBottom: "1.5rem" }}>
+      <div style={{ marginBottom: "1.25rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: "#1a1a1a" }}>Upsells</h1>
         <p style={{ margin: "0.25rem 0 0", color: "#6d7175", fontSize: "0.875rem" }}>Show product recommendations on product pages</p>
       </div>
 
-      {renderWizard()}
+      {/* ── Sub-nav ── */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #e5e7eb", marginBottom: "1.5rem" }}>
+        {subNavBtn("rules", "Rules")}
+        {subNavBtn("stats", "Campaign Statistics")}
+        {subNavBtn("help", "Help")}
+      </div>
 
-      {/* ── Rules table ── */}
-      {rules.length === 0 ? (
-        <div style={{ textAlign: "center", padding: "3rem", color: "#6d7175", background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
-          No upsell rules yet. Create one above.
-        </div>
-      ) : (
+      {/* ── Rules tab ── */}
+      {subTab === "rules" && (
+        <>
+          {renderWizard()}
+
+          {rules.length === 0 ? (
+            <div style={{ textAlign: "center", padding: "3rem", color: "#6d7175", background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)" }}>
+              No upsell rules yet. Create one above.
+            </div>
+          ) : (
+            <div style={{ background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
+              <table style={{ width: "100%", borderCollapse: "collapse" }}>
+                <thead>
+                  <tr style={{ borderBottom: "1px solid #e4e5e7" }}>
+                    {["Campaign", "Trigger products", "Suggestions", ""].map((h, i) => (
+                      <th key={i} style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.8rem", fontWeight: 600, color: "#6d7175", textTransform: "uppercase" }}>{h}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {rules.map((rule, index) => (
+                    <tr key={rule.id} style={{ borderBottom: index < rules.length - 1 ? "1px solid #f1f1f1" : "none" }}>
+                      <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#111827", fontWeight: 600 }}>
+                        {rule.message || "Untitled campaign"}
+                      </td>
+                      <td style={{ padding: "0.85rem 1rem" }}>
+                        {renderTriggerChips(rule)}
+                      </td>
+                      <td style={{ padding: "0.85rem 1rem" }}>
+                        <ProductCarousel products={rule.upsellProducts} storefrontUrlForProduct={storefrontUrlForProduct} />
+                      </td>
+                      <td style={{ padding: "0.85rem 1rem" }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
+                          {/* Status toggle */}
+                          <button
+                            title={rule.enabled === false ? "Resume campaign" : "Pause campaign"}
+                            onClick={() => void handleToggleEnabled(rule)}
+                            style={{
+                              width: 30, height: 30, border: "none", borderRadius: "7px", cursor: "pointer", padding: 0,
+                              display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+                              background: rule.enabled === false ? "#fff7ed" : "#ecfdf5",
+                              color: rule.enabled === false ? "#c2410c" : "#047857",
+                            }}
+                          >
+                            {rule.enabled === false ? (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                            ) : (
+                              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
+                            )}
+                          </button>
+                          {/* Edit */}
+                          <button
+                            title="Edit campaign"
+                            onClick={() => handleEdit(rule)}
+                            style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                          </button>
+                          {/* Duplicate */}
+                          <button
+                            title="Duplicate campaign"
+                            onClick={() => handleDuplicate(rule)}
+                            style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                          </button>
+                          {/* View Stats */}
+                          <button
+                            title="View stats"
+                            onClick={() => router.push(`/dashboard/upsell/${rule.id}`)}
+                            style={{ width: 30, height: 30, border: "1px solid #b7dfce", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#f0faf7", color: "#008060" }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                          </button>
+                          {/* Delete */}
+                          <button
+                            title="Delete campaign"
+                            onClick={() => handleDelete(rule.id)}
+                            style={{ width: 30, height: 30, border: "1px solid #fecaca", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#c0392b" }}
+                          >
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* ── Statistics tab ── */}
+      {subTab === "stats" && (
         <div style={{ background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden" }}>
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e4e5e7" }}>
-                {["Campaign", "Trigger products", "Suggestions", ""].map((h, i) => (
-                  <th key={i} style={{ padding: "0.75rem 1rem", textAlign: "left", fontSize: "0.8rem", fontWeight: 600, color: "#6d7175", textTransform: "uppercase" }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody>
-              {rules.map((rule, index) => (
-                <tr key={rule.id} style={{ borderBottom: index < rules.length - 1 ? "1px solid #f1f1f1" : "none" }}>
-                  <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#111827", fontWeight: 600 }}>
-                    {rule.message || "Untitled campaign"}
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    {renderTriggerChips(rule)}
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <ProductCarousel products={rule.upsellProducts} storefrontUrlForProduct={storefrontUrlForProduct} />
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: "0.35rem" }}>
-                      {/* Status toggle */}
-                      <button
-                        title={rule.enabled === false ? "Resume campaign" : "Pause campaign"}
-                        onClick={() => void handleToggleEnabled(rule)}
-                        style={{
-                          width: 30, height: 30, border: "none", borderRadius: "7px", cursor: "pointer", padding: 0,
-                          display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-                          background: rule.enabled === false ? "#fff7ed" : "#ecfdf5",
-                          color: rule.enabled === false ? "#c2410c" : "#047857",
-                        }}
-                      >
-                        {rule.enabled === false ? (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"/></svg>
-                        ) : (
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/></svg>
-                        )}
-                      </button>
-                      {/* Edit */}
-                      <button
-                        title="Edit campaign"
-                        onClick={() => handleEdit(rule)}
-                        style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                      </button>
-                      {/* Duplicate */}
-                      <button
-                        title="Duplicate campaign"
-                        onClick={() => handleDuplicate(rule)}
-                        style={{ width: 30, height: 30, border: "1px solid #e5e7eb", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#374151" }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
-                      </button>
-                      {/* View Stats */}
-                      <button
-                        title="View stats"
-                        onClick={() => router.push(`/dashboard/upsell/${rule.id}`)}
-                        style={{ width: 30, height: 30, border: "1px solid #b7dfce", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#f0faf7", color: "#008060" }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-                      </button>
-                      {/* Delete */}
-                      <button
-                        title="Delete campaign"
-                        onClick={() => handleDelete(rule.id)}
-                        style={{ width: 30, height: 30, border: "1px solid #fecaca", borderRadius: "7px", cursor: "pointer", padding: 0, display: "inline-flex", alignItems: "center", justifyContent: "center", flexShrink: 0, background: "#fff", color: "#c0392b" }}
-                      >
-                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
-                      </button>
-                    </div>
-                  </td>
+          <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e4e5e7" }}>
+            <p style={{ margin: 0, fontWeight: 600, color: "#1a1a1a", fontSize: "0.92rem" }}>Campaign Statistics</p>
+            <p style={{ margin: "0.2rem 0 0", color: "#6d7175", fontSize: "0.8rem" }}>Performance per campaign. Detailed stats are on individual stats pages.</p>
+          </div>
+          {ruleStatRows.length === 0 ? (
+            <p style={{ padding: "2rem", textAlign: "center", color: "#6d7175", margin: 0 }}>No statistics yet.</p>
+          ) : (
+            <table style={{ width: "100%", borderCollapse: "collapse" }}>
+              <thead>
+                <tr style={{ borderBottom: "1px solid #e4e5e7" }}>
+                  {["Campaign", "Trigger Product", "Suggestions", "Views", "Clicks", "Added", "CTR", "Conv."].map((h, i) => (
+                    <th key={i} style={{ padding: "0.75rem 1rem", textAlign: i >= 3 ? "center" : "left", fontSize: "0.8rem", fontWeight: 600, color: "#6d7175", textTransform: "uppercase" }}>{h}</th>
+                  ))}
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {ruleStatRows.map((row, index) => (
+                  <tr key={row.key} style={{ borderBottom: index < ruleStatRows.length - 1 ? "1px solid #f1f1f1" : "none" }}>
+                    <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#1a1a1a", fontWeight: 600 }}>{row.campaign}</td>
+                    <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#1a1a1a", fontWeight: 500 }}>{row.triggerProductTitle}</td>
+                    <td style={{ padding: "0.85rem 1rem" }}>
+                      <ProductCarousel products={row.suggestions} storefrontUrlForProduct={storefrontUrlForProduct} />
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.views}</td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.clicks}</td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.added}</td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+                      <span style={{ background: "#f1f1f1", padding: "0.2rem 0.6rem", borderRadius: "20px", fontSize: "0.8rem" }}>{row.ctr}</span>
+                    </td>
+                    <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
+                      <span style={{ background: row.added > 0 ? "#e3f1df" : "#f1f1f1", color: row.added > 0 ? "#1a6b3c" : "#6d7175", padding: "0.2rem 0.6rem", borderRadius: "20px", fontSize: "0.8rem" }}>
+                        {row.convRate}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
         </div>
       )}
 
-      {/* ── Stats table ── */}
-      <div style={{ background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", overflow: "hidden", marginTop: "1.5rem" }}>
-        <div style={{ padding: "1rem 1.25rem", borderBottom: "1px solid #e4e5e7" }}>
-          <p style={{ margin: 0, fontWeight: 600, color: "#1a1a1a", fontSize: "0.92rem" }}>Campaign Statistics</p>
-          <p style={{ margin: "0.2rem 0 0", color: "#6d7175", fontSize: "0.8rem" }}>Performance per campaign. Detailed stats are on individual stats pages.</p>
-        </div>
-        {ruleStatRows.length === 0 ? (
-          <p style={{ padding: "2rem", textAlign: "center", color: "#6d7175", margin: 0 }}>No statistics yet.</p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e4e5e7" }}>
-                {["Campaign", "Trigger Product", "Suggestions", "Views", "Clicks", "Added", "CTR", "Conv."].map((h, i) => (
-                  <th key={i} style={{ padding: "0.75rem 1rem", textAlign: i >= 3 ? "center" : "left", fontSize: "0.8rem", fontWeight: 600, color: "#6d7175", textTransform: "uppercase" }}>{h}</th>
+      {/* ── Help tab ── */}
+      {subTab === "help" && (
+        <div style={{ background: "#fff", borderRadius: "10px", boxShadow: "0 1px 4px rgba(0,0,0,0.06)", padding: "1.5rem" }}>
+          <p style={{ margin: "0 0 1.25rem", fontWeight: 700, fontSize: "1rem", color: "#111827" }}>Do you need any help?</p>
+          <p style={{ margin: "0 0 1.5rem", fontSize: "0.9rem", color: "#6b7280", lineHeight: 1.6 }}>
+            You can browse our app guide to understand upsells, read simple examples, and get setup help whenever you need it.
+          </p>
+          <div style={{ display: "grid", gap: "1.25rem" }}>
+            {[
+              {
+                title: "Getting started",
+                body: [
+                  "Step 1 — Name the campaign and choose which products to recommend to shoppers.",
+                  "Step 2 — Pick the product pages where the recommendation will appear. You can also skip this and add triggers later by editing the rule.",
+                ],
+              },
+              {
+                title: "Field guide",
+                body: [
+                  "Campaign name is your internal label. It helps your team recognize the upsell later.",
+                  "Suggested products are the items shown to the shopper. You can also add a discount percent or a short badge if needed.",
+                ],
+              },
+              {
+                title: "Examples",
+                body: [
+                  "Create a rule recommending sleeves and a playmat, then add all card game products as triggers so shoppers see it on any of those pages.",
+                  "A small discount or a badge like Best seller can help the suggestion stand out.",
+                ],
+              },
+              {
+                title: "Common questions",
+                body: [
+                  "Do not use the same product as both a trigger and a suggestion. The app expects them to be different.",
+                  "After saving, visit a trigger product page to confirm the recommendation appears where you expect.",
+                ],
+              },
+            ].map((section) => (
+              <div key={section.title} style={{ borderTop: "1px solid #f3f4f6", paddingTop: "1.1rem" }}>
+                <p style={{ margin: "0 0 0.5rem", fontWeight: 700, fontSize: "0.92rem", color: "#111827" }}>{section.title}</p>
+                {section.body.map((paragraph) => (
+                  <p key={paragraph} style={{ margin: "0 0 0.35rem", fontSize: "0.875rem", lineHeight: 1.65, color: "#4b5563" }}>{paragraph}</p>
                 ))}
-              </tr>
-            </thead>
-            <tbody>
-              {ruleStatRows.map((row, index) => (
-                <tr key={row.key} style={{ borderBottom: index < ruleStatRows.length - 1 ? "1px solid #f1f1f1" : "none" }}>
-                  <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#1a1a1a", fontWeight: 600 }}>{row.campaign}</td>
-                  <td style={{ padding: "0.85rem 1rem", fontSize: "0.875rem", color: "#1a1a1a", fontWeight: 500 }}>{row.triggerProductTitle}</td>
-                  <td style={{ padding: "0.85rem 1rem" }}>
-                    <ProductCarousel products={row.suggestions} storefrontUrlForProduct={storefrontUrlForProduct} />
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.views}</td>
-                  <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.clicks}</td>
-                  <td style={{ padding: "0.85rem 1rem", textAlign: "center", fontSize: "0.875rem", color: "#1a1a1a" }}>{row.added}</td>
-                  <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
-                    <span style={{ background: "#f1f1f1", padding: "0.2rem 0.6rem", borderRadius: "20px", fontSize: "0.8rem" }}>{row.ctr}</span>
-                  </td>
-                  <td style={{ padding: "0.85rem 1rem", textAlign: "center" }}>
-                    <span style={{ background: row.added > 0 ? "#e3f1df" : "#f1f1f1", color: row.added > 0 ? "#1a6b3c" : "#6d7175", padding: "0.2rem 0.6rem", borderRadius: "20px", fontSize: "0.8rem" }}>
-                      {row.convRate}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      <div style={{ marginTop: "1.5rem" }}>
-        <FeatureHelpCard
-          intro="You can browse our app guide to understand upsells, read simple examples, and get setup help whenever you need it."
-          sections={[
-            {
-              title: "Getting started",
-              body: [
-                "Step 1 — Name the campaign and choose which products to recommend to shoppers.",
-                "Step 2 — Pick the product pages where the recommendation will appear. You can also skip this and add triggers later by editing the rule.",
-              ],
-            },
-            {
-              title: "Field guide",
-              body: [
-                "Campaign name is your internal label. It helps your team recognize the upsell later.",
-                "Suggested products are the items shown to the shopper. You can also add a discount percent or a short badge if needed.",
-              ],
-            },
-            {
-              title: "Examples",
-              body: [
-                "Create a rule recommending sleeves and a playmat, then add all card game products as triggers so shoppers see it on any of those pages.",
-                "A small discount or a badge like Best seller can help the suggestion stand out.",
-              ],
-            },
-            {
-              title: "Common questions",
-              body: [
-                "Do not use the same product as both a trigger and a suggestion. The app expects them to be different.",
-                "After saving, visit a trigger product page to confirm the recommendation appears where you expect.",
-              ],
-            },
-          ]}
-        />
-      </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }

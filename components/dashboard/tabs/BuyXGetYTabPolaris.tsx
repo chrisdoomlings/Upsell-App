@@ -23,7 +23,6 @@ import {
 } from "@shopify/polaris";
 import OrdersChart from "@/components/charts/OrdersChart";
 import RevenueChart from "@/components/charts/RevenueChart";
-import FeatureHelpCard from "@/components/dashboard/FeatureHelpCard";
 import PolarisProvider from "@/components/PolarisProvider";
 import type { GeoCountdownCampaign, GeoCountdownPageTarget } from "@/lib/geoCountdown";
 import { safeJson } from "../shared";
@@ -40,6 +39,7 @@ export default function BuyXGetYTabPolaris() {
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [subTab, setSubTab] = useState<"rules" | "stats" | "help">("rules");
   const [name, setName] = useState("Cart gift");
   const [buyQuantity, setBuyQuantity] = useState("1");
   const [giftQuantity, setGiftQuantity] = useState("1");
@@ -305,6 +305,29 @@ export default function BuyXGetYTabPolaris() {
     padding: 0,
   };
 
+  const subNavBtn = (key: typeof subTab, label: string) => {
+    const active = subTab === key;
+    return (
+      <button
+        key={key}
+        onClick={() => setSubTab(key)}
+        style={{
+          padding: "0.45rem 1rem",
+          border: "none",
+          borderBottom: active ? "2px solid #008060" : "2px solid transparent",
+          background: "none",
+          color: active ? "#008060" : "#6b7280",
+          fontWeight: active ? 600 : 400,
+          fontSize: "0.875rem",
+          cursor: "pointer",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {label}
+      </button>
+    );
+  };
+
   return (
     <BlockStack gap="500">
 
@@ -316,332 +339,362 @@ export default function BuyXGetYTabPolaris() {
         </Text>
       </BlockStack>
 
-      {/* Error banner */}
+      {/* Sub-nav */}
+      <div style={{ display: "flex", gap: 0, borderBottom: "1px solid #e5e7eb" }}>
+        {subNavBtn("rules", "Rules")}
+        {subNavBtn("stats", "Statistics")}
+        {subNavBtn("help", "Help")}
+      </div>
+
+      {/* Error / success banners — always visible */}
       {error && (
         <Banner tone="critical" onDismiss={() => setError(null)}>
           {error}
         </Banner>
       )}
-
       {successMessage && (
         <Banner tone="success" onDismiss={() => setSuccessMessage(null)}>
           {successMessage}
         </Banner>
       )}
 
-      {/* Summary stat cards */}
-      {summary && (
-        <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
-          {[
-            { label: "Active rules", value: summary.activeRules, sub: "Currently compiled" },
-            { label: "Qualified carts", value: summary.totalQualified, sub: "Gift unlocked" },
-            { label: "Auto-added gifts", value: summary.totalAutoAdded, sub: "Inserted by app" },
-            { label: "Conversion", value: summary.conversionRate, sub: "Qualified to added" },
-          ].map((card) => (
-            <Card key={card.label}>
-              <BlockStack gap="100">
-                <Text as="p" variant="bodySm" tone="subdued">{card.label}</Text>
-                <Text as="p" variant="headingLg">{String(card.value)}</Text>
-                <Text as="p" variant="bodySm" tone="subdued">{card.sub}</Text>
-              </BlockStack>
-            </Card>
-          ))}
-        </InlineGrid>
-      )}
-
-      {/* Create rule form */}
-      <Card>
+      {/* ── Rules tab ── */}
+      {subTab === "rules" && (
         <BlockStack gap="500">
-          <InlineStack align="space-between" blockAlign="start">
-            <BlockStack gap="100">
-              <Text as="p" variant="bodySm" tone="subdued">{editingId ? "Editing rule" : "New free gift rule"}</Text>
-              <Text as="h2" variant="headingLg">{editingId ? "Edit Buy X Get Y rule" : "Launch a Buy X Get Y campaign"}</Text>
-            </BlockStack>
-            <InlineStack gap="200">
-              {editingId && (
-                <Button variant="secondary" onClick={resetForm}>Cancel edit</Button>
-              )}
-              <Badge tone="success">Auto-add gift flow</Badge>
-            </InlineStack>
-          </InlineStack>
-
-          <InlineGrid columns={{ xs: 1, md: 3 }} gap="300">
-            {[
-              { label: "Main product", value: appliesToAnyProduct ? "Any product in store" : selectedTriggerCount ? "1 selected" : "Choose product" },
-              { label: "Gift product", value: selectedGiftLabel },
-              { label: "Rule outcome", value: limitOneGiftPerOrder ? "One free gift max" : `Buy ${buyQuantity || "1"}, get ${giftQuantity || "1"}` },
-            ].map((item) => (
-              <Card key={item.label}>
+          {/* Create rule form */}
+          <Card>
+            <BlockStack gap="500">
+              <InlineStack align="space-between" blockAlign="start">
                 <BlockStack gap="100">
-                  <Text as="p" variant="bodySm" tone="subdued">{item.label}</Text>
-                  <Text as="p" variant="headingMd">{item.value}</Text>
+                  <Text as="p" variant="bodySm" tone="subdued">{editingId ? "Editing rule" : "New free gift rule"}</Text>
+                  <Text as="h2" variant="headingLg">{editingId ? "Edit Buy X Get Y rule" : "Launch a Buy X Get Y campaign"}</Text>
                 </BlockStack>
-              </Card>
-            ))}
-          </InlineGrid>
+                <InlineStack gap="200">
+                  {editingId && (
+                    <Button variant="secondary" onClick={resetForm}>Cancel edit</Button>
+                  )}
+                  <Badge tone="success">Auto-add gift flow</Badge>
+                </InlineStack>
+              </InlineStack>
 
-          <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
-            <Card>
-              <BlockStack gap="400">
-                <BlockStack gap="100">
-                  <InlineStack gap="100" blockAlign="center">
-                    <Text as="h3" variant="headingMd">Rule setup</Text>
-                    <Tooltip content="Basic settings for when the offer should unlock and how the gift should behave.">
-                      <button type="button" aria-label="Rule setup help" style={helpBadgeButton}>?</button>
-                    </Tooltip>
-                  </InlineStack>
-                  <Text as="p" variant="bodySm" tone="subdued">
-                    Set the campaign name, quantities, shopper message, and execution priority.
-                  </Text>
-                </BlockStack>
-                <InlineGrid columns={{ xs: 1, sm: 2 }} gap="300">
-                  <TextField label="Rule name" value={name} onChange={setName} autoComplete="off" helpText="An internal name so you can recognize this offer later." />
-                  <TextField label="Priority" type="number" min={1} value={priority} onChange={setPriority} autoComplete="off" helpText="Use a lower number if you want this rule to run before other BXGY rules." />
-                </InlineGrid>
-                <InlineGrid columns={{ xs: 1, sm: 2 }} gap="300">
-                  <TextField label="Buy quantity" type="number" min={1} value={buyQuantity} onChange={setBuyQuantity} autoComplete="off" helpText="How many main products the shopper must add before the gift is unlocked." />
-                  <TextField label="Gift quantity" type="number" min={1} value={giftQuantity} onChange={setGiftQuantity} autoComplete="off" helpText="How many free gift items the shopper receives when the offer unlocks." />
-                </InlineGrid>
-                <TextField label="Gift message" value={message} onChange={setMessage} autoComplete="off" helpText="Short shopper-facing text for the free gift experience." />
-                <Checkbox label="Limit to one gift per cart even if more items qualify" checked={limitOneGiftPerOrder} onChange={setLimitOneGiftPerOrder} helpText="Turn this on if you want the shopper to receive only one gift batch per cart." />
-                <Checkbox label="Auto-add gift when the rule qualifies" checked={autoAdd} onChange={setAutoAdd} helpText="Turn this on if you want the app to place the gift into the cart automatically." />
-                <Checkbox label="Qualify when any product in the store is added" checked={appliesToAnyProduct} onChange={setAppliesToAnyProduct} helpText="Use this if you want the shopper to receive the free gift when they add any non-gift product to cart." />
-              </BlockStack>
-            </Card>
+              <InlineGrid columns={{ xs: 1, md: 3 }} gap="300">
+                {[
+                  { label: "Main product", value: appliesToAnyProduct ? "Any product in store" : selectedTriggerCount ? "1 selected" : "Choose product" },
+                  { label: "Gift product", value: selectedGiftLabel },
+                  { label: "Rule outcome", value: limitOneGiftPerOrder ? "One free gift max" : `Buy ${buyQuantity || "1"}, get ${giftQuantity || "1"}` },
+                ].map((item) => (
+                  <Card key={item.label}>
+                    <BlockStack gap="100">
+                      <Text as="p" variant="bodySm" tone="subdued">{item.label}</Text>
+                      <Text as="p" variant="headingMd">{item.value}</Text>
+                    </BlockStack>
+                  </Card>
+                ))}
+              </InlineGrid>
 
-            <BlockStack gap="400">
-              <Card>
-                <BlockStack gap="400">
-                  <BlockStack gap="100">
-                    <InlineStack gap="100" blockAlign="center">
-                      <Text as="h3" variant="headingMd">Gift product</Text>
-                      <Tooltip content="This is the free item the shopper receives when the offer unlocks.">
-                        <button type="button" aria-label="Gift product help" style={helpBadgeButton}>?</button>
-                      </Tooltip>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      Choose the exact free gift product and variant to add into the cart when the rule qualifies.
-                    </Text>
+              <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                <Card>
+                  <BlockStack gap="400">
+                    <BlockStack gap="100">
+                      <InlineStack gap="100" blockAlign="center">
+                        <Text as="h3" variant="headingMd">Rule setup</Text>
+                        <Tooltip content="Basic settings for when the offer should unlock and how the gift should behave.">
+                          <button type="button" aria-label="Rule setup help" style={helpBadgeButton}>?</button>
+                        </Tooltip>
+                      </InlineStack>
+                      <Text as="p" variant="bodySm" tone="subdued">
+                        Set the campaign name, quantities, shopper message, and execution priority.
+                      </Text>
+                    </BlockStack>
+                    <InlineGrid columns={{ xs: 1, sm: 2 }} gap="300">
+                      <TextField label="Rule name" value={name} onChange={setName} autoComplete="off" helpText="An internal name so you can recognize this offer later." />
+                      <TextField label="Priority" type="number" min={1} value={priority} onChange={setPriority} autoComplete="off" helpText="Use a lower number if you want this rule to run before other BXGY rules." />
+                    </InlineGrid>
+                    <InlineGrid columns={{ xs: 1, sm: 2 }} gap="300">
+                      <TextField label="Buy quantity" type="number" min={1} value={buyQuantity} onChange={setBuyQuantity} autoComplete="off" helpText="How many main products the shopper must add before the gift is unlocked." />
+                      <TextField label="Gift quantity" type="number" min={1} value={giftQuantity} onChange={setGiftQuantity} autoComplete="off" helpText="How many free gift items the shopper receives when the offer unlocks." />
+                    </InlineGrid>
+                    <TextField label="Gift message" value={message} onChange={setMessage} autoComplete="off" helpText="Short shopper-facing text for the free gift experience." />
+                    <Checkbox label="Limit to one gift per cart even if more items qualify" checked={limitOneGiftPerOrder} onChange={setLimitOneGiftPerOrder} helpText="Turn this on if you want the shopper to receive only one gift batch per cart." />
+                    <Checkbox label="Auto-add gift when the rule qualifies" checked={autoAdd} onChange={setAutoAdd} helpText="Turn this on if you want the app to place the gift into the cart automatically." />
+                    <Checkbox label="Qualify when any product in the store is added" checked={appliesToAnyProduct} onChange={setAppliesToAnyProduct} helpText="Use this if you want the shopper to receive the free gift when they add any non-gift product to cart." />
                   </BlockStack>
-                  <PolarisProductAutocomplete
-                    products={products}
-                    value={giftProductId}
-                    onChange={updateGiftProduct}
-                    label="Gift product"
-                    placeholder="Search free gift product"
-                    helpText="This item is the free gift attached to the rule."
-                  />
-                  {hasMeaningfulVariants(selectedGiftProduct) && (
-                    <Select
-                      label="Gift variant"
-                      options={[
-                        { label: "Select variant", value: "" },
-                        ...(selectedGiftProduct?.variants?.map((variant) => ({
+                </Card>
+
+                <BlockStack gap="400">
+                  <Card>
+                    <BlockStack gap="400">
+                      <BlockStack gap="100">
+                        <InlineStack gap="100" blockAlign="center">
+                          <Text as="h3" variant="headingMd">Gift product</Text>
+                          <Tooltip content="This is the free item the shopper receives when the offer unlocks.">
+                            <button type="button" aria-label="Gift product help" style={helpBadgeButton}>?</button>
+                          </Tooltip>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          Choose the exact free gift product and variant to add into the cart when the rule qualifies.
+                        </Text>
+                      </BlockStack>
+                      <PolarisProductAutocomplete
+                        products={products}
+                        value={giftProductId}
+                        onChange={updateGiftProduct}
+                        label="Gift product"
+                        placeholder="Search free gift product"
+                        helpText="This item is the free gift attached to the rule."
+                      />
+                      {hasMeaningfulVariants(selectedGiftProduct) && (
+                        <Select
+                          label="Gift variant"
+                          options={[
+                            { label: "Select variant", value: "" },
+                            ...(selectedGiftProduct?.variants?.map((variant) => ({
+                              label: variant.title,
+                              value: String(variant.id),
+                            })) ?? []),
+                          ]}
+                          value={giftVariantId}
+                          onChange={setGiftVariantId}
+                        />
+                      )}
+                    </BlockStack>
+                  </Card>
+
+                  <Card>
+                    <BlockStack gap="300">
+                      <BlockStack gap="100">
+                        <InlineStack gap="100" blockAlign="center">
+                          <Text as="h3" variant="headingMd">Main product</Text>
+                          <Tooltip content="This is the product the shopper must buy to unlock the free gift.">
+                            <button type="button" aria-label="Main product help" style={helpBadgeButton}>?</button>
+                          </Tooltip>
+                        </InlineStack>
+                        <Text as="p" variant="bodySm" tone="subdued">
+                          {appliesToAnyProduct
+                            ? "Any non-gift product in the cart can unlock the free gift when the customer reaches the Buy quantity."
+                            : "Choose the product that unlocks the free gift when the customer reaches the Buy quantity."}
+                        </Text>
+                      </BlockStack>
+                      {appliesToAnyProduct ? (
+                        <Banner tone="info">
+                          This rule will qualify on any product in the store, so no specific main product needs to be selected.
+                        </Banner>
+                      ) : (() => {
+                        const selectedProduct = products.find((product) => String(product.id) === buyProductIds[0]);
+                        const variantOptions = selectedProduct?.variants?.map((variant) => ({
                           label: variant.title,
                           value: String(variant.id),
-                        })) ?? []),
-                      ]}
-                      value={giftVariantId}
-                      onChange={setGiftVariantId}
-                    />
-                  )}
-                </BlockStack>
-              </Card>
-
-              <Card>
-                <BlockStack gap="300">
-                  <BlockStack gap="100">
-                    <InlineStack gap="100" blockAlign="center">
-                      <Text as="h3" variant="headingMd">Main product</Text>
-                      <Tooltip content="This is the product the shopper must buy to unlock the free gift.">
-                        <button type="button" aria-label="Main product help" style={helpBadgeButton}>?</button>
-                      </Tooltip>
-                    </InlineStack>
-                    <Text as="p" variant="bodySm" tone="subdued">
-                      {appliesToAnyProduct
-                        ? "Any non-gift product in the cart can unlock the free gift when the customer reaches the Buy quantity."
-                        : "Choose the product that unlocks the free gift when the customer reaches the Buy quantity."}
-                    </Text>
-                  </BlockStack>
-                  {appliesToAnyProduct ? (
-                    <Banner tone="info">
-                      This rule will qualify on any product in the store, so no specific main product needs to be selected.
-                    </Banner>
-                  ) : (() => {
-                    const selectedProduct = products.find((product) => String(product.id) === buyProductIds[0]);
-                    const variantOptions = selectedProduct?.variants?.map((variant) => ({
-                      label: variant.title,
-                      value: String(variant.id),
-                    })) ?? [];
-                    return (
-                      <InlineStack gap="200" blockAlign="end">
-                        <div style={{ flex: 1 }}>
-                          <PolarisProductAutocomplete
-                            products={products}
-                            value={buyProductIds[0] ?? ""}
-                            onChange={(value) => updateBuyProduct(0, value)}
-                            label="Main product"
-                            placeholder="Search main product"
-                            helpText="This is the product the shopper must add to unlock the free gift."
-                          />
-                        </div>
-                        {hasMeaningfulVariants(selectedProduct) && (
-                          <div style={{ minWidth: 220 }}>
-                            <Select
-                              label="Variant"
-                              options={[{ label: "Select variant", value: "" }, ...variantOptions]}
-                              value={buyVariantIds[0] ?? ""}
-                              onChange={(value) => updateBuyVariant(0, value)}
-                            />
-                          </div>
-                        )}
-                      </InlineStack>
-                    );
-                  })()}
-                </BlockStack>
-              </Card>
-            </BlockStack>
-          </InlineGrid>
-
-          <InlineStack align="end">
-            <Button variant="primary" onClick={handleSave} loading={saving}>
-              {editingId ? "Update rule" : "Save BXGY rule"}
-            </Button>
-          </InlineStack>
-        </BlockStack>
-      </Card>
-
-      {/* Rules list */}
-      <Card padding="0">
-        {rules.length === 0 ? (
-          <EmptyState heading="No Buy X Get Y rules yet" image="">
-            <Text as="p" variant="bodyMd" tone="subdued">
-              Create your first rule above to automatically add free gifts to qualifying carts.
-            </Text>
-          </EmptyState>
-        ) : (
-          <IndexTable
-            resourceName={{ singular: "rule", plural: "rules" }}
-            itemCount={rules.length}
-            headings={[
-              { title: "Rule" },
-              { title: "Buy products" },
-              { title: "Gift" },
-              { title: "Quantities" },
-              { title: "Priority" },
-              { title: "Status" },
-              { title: "" },
-            ]}
-            selectable={false}
-          >
-            {rules.map((rule, index) => (
-              <IndexTable.Row id={rule.id} key={rule.id} position={index}>
-                <IndexTable.Cell>
-                  <BlockStack gap="050">
-                    <Text as="p" variant="bodyMd" fontWeight="semibold">{rule.name}</Text>
-                    <Text as="p" variant="bodySm" tone="subdued">{rule.message}</Text>
-                  </BlockStack>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Text as="p" variant="bodySm">{rule.appliesToAnyProduct ? "Any product in store" : rule.buyProducts.map((p) => p.title).join(", ")}</Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <InlineStack gap="200" blockAlign="center">
-                    {rule.giftProduct?.image && (
-                      <Thumbnail source={rule.giftProduct.image} alt={rule.giftProduct.title ?? ""} size="small" />
-                    )}
-                    <BlockStack gap="050">
-                      <Text as="p" variant="bodySm" fontWeight="semibold">{rule.giftProduct?.title ?? "—"}</Text>
-                      <Badge tone="success">Free gift</Badge>
+                        })) ?? [];
+                        return (
+                          <InlineStack gap="200" blockAlign="end">
+                            <div style={{ flex: 1 }}>
+                              <PolarisProductAutocomplete
+                                products={products}
+                                value={buyProductIds[0] ?? ""}
+                                onChange={(value) => updateBuyProduct(0, value)}
+                                label="Main product"
+                                placeholder="Search main product"
+                                helpText="This is the product the shopper must add to unlock the free gift."
+                              />
+                            </div>
+                            {hasMeaningfulVariants(selectedProduct) && (
+                              <div style={{ minWidth: 220 }}>
+                                <Select
+                                  label="Variant"
+                                  options={[{ label: "Select variant", value: "" }, ...variantOptions]}
+                                  value={buyVariantIds[0] ?? ""}
+                                  onChange={(value) => updateBuyVariant(0, value)}
+                                />
+                              </div>
+                            )}
+                          </InlineStack>
+                        );
+                      })()}
                     </BlockStack>
-                  </InlineStack>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Text as="p" variant="bodySm">{rule.limitOneGiftPerOrder ? `Buy ${rule.buyQuantity}, get ${rule.giftQuantity} once per cart` : `Buy ${rule.buyQuantity}, get ${rule.giftQuantity}`}</Text>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Badge>{String(rule.priority)}</Badge>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <Badge tone={rule.enabled ? "success" : "warning"}>{rule.enabled ? "Active" : "Paused"}</Badge>
-                </IndexTable.Cell>
-                <IndexTable.Cell>
-                  <InlineStack gap="200">
-                    <Button size="slim" onClick={() => handleEdit(rule)}>Edit</Button>
-                    <Button size="slim" loading={togglingId === rule.id} disabled={togglingId === rule.id} onClick={() => void handleToggleEnabled(rule)}>
-                      {rule.enabled ? "Pause" : "Resume"}
-                    </Button>
-                    <Button tone="critical" variant="secondary" size="slim" onClick={() => handleDelete(rule.id)}>
-                      Delete
-                    </Button>
-                  </InlineStack>
-                </IndexTable.Cell>
-              </IndexTable.Row>
-            ))}
-          </IndexTable>
-        )}
-      </Card>
+                  </Card>
+                </BlockStack>
+              </InlineGrid>
 
-      {/* Performance stats */}
-      <Card>
-        <BlockStack gap="400">
-          <Text as="h2" variant="headingMd">BXGY performance</Text>
-          {ruleStats.length === 0 ? (
-            <Text as="p" variant="bodyMd" tone="subdued">
-              Statistics will appear once carts qualify and gifts are auto-added.
-            </Text>
-          ) : (
-            <DataTable
-              columnContentTypes={["text", "text", "text", "numeric", "numeric", "text"]}
-              headings={["Rule", "Buy", "Gift", "Qualified", "Added", "Conversion"]}
-              rows={ruleStats.map((stat) => [
-                stat.name,
-                stat.buyLabel,
-                stat.giftLabel,
-                stat.qualified,
-                stat.autoAdded,
-                <Badge key={stat.ruleId} tone="success">{stat.conversionRate}</Badge>,
-              ])}
-            />
-          )}
+              <InlineStack align="end">
+                <Button variant="primary" onClick={handleSave} loading={saving}>
+                  {editingId ? "Update rule" : "Save BXGY rule"}
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+
+          {/* Rules list */}
+          <Card padding="0">
+            {rules.length === 0 ? (
+              <EmptyState heading="No Buy X Get Y rules yet" image="">
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Create your first rule above to automatically add free gifts to qualifying carts.
+                </Text>
+              </EmptyState>
+            ) : (
+              <IndexTable
+                resourceName={{ singular: "rule", plural: "rules" }}
+                itemCount={rules.length}
+                headings={[
+                  { title: "Rule" },
+                  { title: "Buy products" },
+                  { title: "Gift" },
+                  { title: "Quantities" },
+                  { title: "Priority" },
+                  { title: "Status" },
+                  { title: "" },
+                ]}
+                selectable={false}
+              >
+                {rules.map((rule, index) => (
+                  <IndexTable.Row id={rule.id} key={rule.id} position={index}>
+                    <IndexTable.Cell>
+                      <BlockStack gap="050">
+                        <Text as="p" variant="bodyMd" fontWeight="semibold">{rule.name}</Text>
+                        <Text as="p" variant="bodySm" tone="subdued">{rule.message}</Text>
+                      </BlockStack>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Text as="p" variant="bodySm">{rule.appliesToAnyProduct ? "Any product in store" : rule.buyProducts.map((p) => p.title).join(", ")}</Text>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <InlineStack gap="200" blockAlign="center">
+                        {rule.giftProduct?.image && (
+                          <Thumbnail source={rule.giftProduct.image} alt={rule.giftProduct.title ?? ""} size="small" />
+                        )}
+                        <BlockStack gap="050">
+                          <Text as="p" variant="bodySm" fontWeight="semibold">{rule.giftProduct?.title ?? "—"}</Text>
+                          <Badge tone="success">Free gift</Badge>
+                        </BlockStack>
+                      </InlineStack>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Text as="p" variant="bodySm">{rule.limitOneGiftPerOrder ? `Buy ${rule.buyQuantity}, get ${rule.giftQuantity} once per cart` : `Buy ${rule.buyQuantity}, get ${rule.giftQuantity}`}</Text>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Badge>{String(rule.priority)}</Badge>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <Badge tone={rule.enabled ? "success" : "warning"}>{rule.enabled ? "Active" : "Paused"}</Badge>
+                    </IndexTable.Cell>
+                    <IndexTable.Cell>
+                      <InlineStack gap="200">
+                        <Button size="slim" onClick={() => handleEdit(rule)}>Edit</Button>
+                        <Button size="slim" loading={togglingId === rule.id} disabled={togglingId === rule.id} onClick={() => void handleToggleEnabled(rule)}>
+                          {rule.enabled ? "Pause" : "Resume"}
+                        </Button>
+                        <Button tone="critical" variant="secondary" size="slim" onClick={() => handleDelete(rule.id)}>
+                          Delete
+                        </Button>
+                      </InlineStack>
+                    </IndexTable.Cell>
+                  </IndexTable.Row>
+                ))}
+              </IndexTable>
+            )}
+          </Card>
         </BlockStack>
-      </Card>
+      )}
 
-      <FeatureHelpCard
-        intro="You can browse our app guide to understand this section, read common questions, and get simple setup help whenever you need it."
-        sections={[
-          {
-            title: "Getting started",
-            body: [
-              "Choose a main product, or switch the rule to any product in store, then choose a gift product and decide how many items the shopper must buy before the gift is unlocked.",
-              "Once the shopper qualifies, the app can automatically place the free gift into the cart for them.",
-            ],
-          },
-          {
-            title: "Field guide",
-            body: [
-              "Main product is the product the shopper must buy to unlock the offer. If you turn on any-product mode, then any non-gift product in the store can unlock it.",
-              "Gift product is the free item the shopper receives. Gift quantity is how many free gift items they receive when the offer is unlocked.",
-              "Turn on the gift limit option if you want the shopper to receive the gift only once, even if they add more qualifying items.",
-            ],
-          },
-          {
-            title: "Examples",
-            body: [
-              "Buy 1, get 1 means the shopper adds 1 main product and receives 1 free gift.",
-              "Buy 3, get 3 means the shopper must add 3 of the main product, then receives 3 free gifts.",
-              "If you want only one batch of gifts per cart, turn on the limit option.",
-            ],
-          },
-          {
-            title: "Common questions",
-            body: [
-              "In most cases the main product and gift product should be different products.",
-              "After saving a rule, test it once on the storefront to make sure the cart behaves the way you expect.",
-            ],
-          },
-        ]}
-      />
+      {/* ── Statistics tab ── */}
+      {subTab === "stats" && (
+        <BlockStack gap="500">
+          {summary && (
+            <InlineGrid columns={{ xs: 1, sm: 2, md: 4 }} gap="400">
+              {[
+                { label: "Active rules", value: summary.activeRules, sub: "Currently compiled" },
+                { label: "Qualified carts", value: summary.totalQualified, sub: "Gift unlocked" },
+                { label: "Auto-added gifts", value: summary.totalAutoAdded, sub: "Inserted by app" },
+                { label: "Conversion", value: summary.conversionRate, sub: "Qualified to added" },
+              ].map((card) => (
+                <Card key={card.label}>
+                  <BlockStack gap="100">
+                    <Text as="p" variant="bodySm" tone="subdued">{card.label}</Text>
+                    <Text as="p" variant="headingLg">{String(card.value)}</Text>
+                    <Text as="p" variant="bodySm" tone="subdued">{card.sub}</Text>
+                  </BlockStack>
+                </Card>
+              ))}
+            </InlineGrid>
+          )}
+          <Card>
+            <BlockStack gap="400">
+              <Text as="h2" variant="headingMd">BXGY performance</Text>
+              {ruleStats.length === 0 ? (
+                <Text as="p" variant="bodyMd" tone="subdued">
+                  Statistics will appear once carts qualify and gifts are auto-added.
+                </Text>
+              ) : (
+                <DataTable
+                  columnContentTypes={["text", "text", "text", "numeric", "numeric", "text"]}
+                  headings={["Rule", "Buy", "Gift", "Qualified", "Added", "Conversion"]}
+                  rows={ruleStats.map((stat) => [
+                    stat.name,
+                    stat.buyLabel,
+                    stat.giftLabel,
+                    stat.qualified,
+                    stat.autoAdded,
+                    <Badge key={stat.ruleId} tone="success">{stat.conversionRate}</Badge>,
+                  ])}
+                />
+              )}
+            </BlockStack>
+          </Card>
+        </BlockStack>
+      )}
+
+      {/* ── Help tab ── */}
+      {subTab === "help" && (
+        <Card>
+          <BlockStack gap="500">
+            <BlockStack gap="100">
+              <Text as="h2" variant="headingMd">Do you need any help?</Text>
+              <Text as="p" variant="bodyMd" tone="subdued">
+                You can browse our app guide to understand this section, read common questions, and get simple setup help whenever you need it.
+              </Text>
+            </BlockStack>
+            {[
+              {
+                title: "Getting started",
+                body: [
+                  "Choose a main product, or switch the rule to any product in store, then choose a gift product and decide how many items the shopper must buy before the gift is unlocked.",
+                  "Once the shopper qualifies, the app can automatically place the free gift into the cart for them.",
+                ],
+              },
+              {
+                title: "Field guide",
+                body: [
+                  "Main product is the product the shopper must buy to unlock the offer. If you turn on any-product mode, then any non-gift product in the store can unlock it.",
+                  "Gift product is the free item the shopper receives. Gift quantity is how many free gift items they receive when the offer is unlocked.",
+                  "Turn on the gift limit option if you want the shopper to receive the gift only once, even if they add more qualifying items.",
+                ],
+              },
+              {
+                title: "Examples",
+                body: [
+                  "Buy 1, get 1 means the shopper adds 1 main product and receives 1 free gift.",
+                  "Buy 3, get 3 means the shopper must add 3 of the main product, then receives 3 free gifts.",
+                  "If you want only one batch of gifts per cart, turn on the limit option.",
+                ],
+              },
+              {
+                title: "Common questions",
+                body: [
+                  "In most cases the main product and gift product should be different products.",
+                  "After saving a rule, test it once on the storefront to make sure the cart behaves the way you expect.",
+                ],
+              },
+            ].map((section) => (
+              <BlockStack key={section.title} gap="200">
+                <Text as="h3" variant="headingSm">{section.title}</Text>
+                {section.body.map((paragraph) => (
+                  <Text key={paragraph} as="p" variant="bodyMd" tone="subdued">{paragraph}</Text>
+                ))}
+              </BlockStack>
+            ))}
+          </BlockStack>
+        </Card>
+      )}
 
     </BlockStack>
   );
