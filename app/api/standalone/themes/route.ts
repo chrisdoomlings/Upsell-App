@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/sessionStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { listThemes, publishTheme } from "@/lib/shopify/themeSwitcher";
 
 export const runtime = "nodejs";

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStorage } from "@/lib/sessionStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
 import { listPostPurchaseOffers, upsertPostPurchaseOffer } from "@/lib/shopify/postPurchaseOfferStore";
 import { setShopPostPurchaseOffersMetafield } from "@/lib/shopify/shopPostPurchaseOffersMetafield";

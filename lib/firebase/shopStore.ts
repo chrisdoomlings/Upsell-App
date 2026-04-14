@@ -1,4 +1,5 @@
-// Legacy compatibility wrapper. Prefer importing from "@/lib/shopStore".
+// Shop data is stored in Supabase. Keep this Firebase-path wrapper as the
+// active import path for the codebase.
 export {
   saveShop,
   getShop,
@@ -6,5 +7,5 @@ export {
   updateShopSettings,
   deleteShopAllData,
   listShops,
-} from "@/lib/shopStore";
-export type { ShopData } from "@/lib/shopStore";
+} from "@/lib/supabase/shopStore";
+export type { ShopData } from "@/lib/supabase/shopStore";

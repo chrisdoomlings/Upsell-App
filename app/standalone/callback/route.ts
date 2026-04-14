@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { saveShop } from "@/lib/shopStore";
+import { saveShop } from "@/lib/firebase/shopStore";
 import { signShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/sessionStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { Session } from "@shopify/shopify-api";
 
 export const runtime = "nodejs";

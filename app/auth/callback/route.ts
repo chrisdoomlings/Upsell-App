@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Session } from "@shopify/shopify-api";
-import { saveShop } from "@/lib/shopStore";
+import { saveShop } from "@/lib/firebase/shopStore";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
-import { sessionStorage } from "@/lib/sessionStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
-import { getShop, saveShop } from "@/lib/shopStore";
-import { sessionStorage } from "@/lib/sessionStore";
+import { getShop, saveShop } from "@/lib/firebase/shopStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 
 const SHOP_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 

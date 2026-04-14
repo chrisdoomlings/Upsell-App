@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopify } from "@/lib/shopify/client";
-import { sessionStorage } from "@/lib/sessionStore";
+import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { Session } from "@shopify/shopify-api";
 
 export async function verifyRequest(req: NextRequest): Promise<{

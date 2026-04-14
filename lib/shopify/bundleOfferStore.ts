@@ -1,4 +1,4 @@
-import { getShop, updateShopSettings } from "@/lib/shopStore";
+import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
 
 export type BundleOfferItem = {
   productId: string;
