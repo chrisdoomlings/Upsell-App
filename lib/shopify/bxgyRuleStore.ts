@@ -1,5 +1,4 @@
-import { shopifyAdminGraphql } from "@/lib/shopify/adminGraphql";
-import { resolveMetaobjectType } from "@/lib/shopify/metaobjectType";
+import { getDb } from "@/lib/supabase/client";
 
 export interface BxgyProduct {
   productId: string;
@@ -25,327 +24,87 @@ export interface BxgyRule {
   enabled: boolean;
 }
 
-const TYPE = "$app:bxgy_rule";
-const DEFINITION_NAME = "Buy X Get Y Rule";
-
 function normalizePositiveInt(value: unknown, fallback = 1) {
   const parsed = Number.parseInt(String(value ?? fallback), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
 }
 
-function getFieldValue(fields: Array<{ key: string; value: string }> | null | undefined, key: string) {
-  if (!fields) return null;
-  const field = fields.find((entry) => entry?.key === key);
-  return field?.value ?? null;
-}
-
-function parseJson<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
-}
-
-function normalize(value: string | null | undefined) {
-  return String(value ?? "").trim().toLowerCase();
-}
-
-async function ensureBxgyDefinition(shop: string, accessToken: string) {
-  const resolved = await resolveMetaobjectType(shop, accessToken, TYPE, DEFINITION_NAME);
-  if (resolved.foundDefinition) {
-    const definitionLookup = await shopifyAdminGraphql(
-      shop,
-      accessToken,
-      `
-        query BxgyDefinitionLookup {
-          metaobjectDefinitions(first: 250) {
-            nodes {
-              id
-              name
-              type
-              fieldDefinitions {
-                key
-              }
-            }
-          }
-        }
-      `,
-    );
-
-    const definitions = definitionLookup?.data?.metaobjectDefinitions?.nodes ?? [];
-    const logicalKey = String(TYPE || "").replace(/^\$app:/, "");
-    const wantedName = normalize(DEFINITION_NAME);
-    const match = definitions.find((node: { id?: string; type?: string; name?: string }) => {
-      const type = String(node?.type ?? "");
-      return (
-        type === resolved.type ||
-        type === TYPE ||
-        type === logicalKey ||
-        type.endsWith(`--${logicalKey}`) ||
-        normalize(node?.name) === wantedName
-      );
-    });
-
-    const hasLimitField = (match?.fieldDefinitions ?? []).some(
-      (field: { key?: string }) => String(field?.key ?? "") === "limit_one_gift_per_order",
-    );
-    const hasAnyProductField = (match?.fieldDefinitions ?? []).some(
-      (field: { key?: string }) => String(field?.key ?? "") === "applies_to_any_product",
-    );
-
-    if (match?.id && (!hasLimitField || !hasAnyProductField)) {
-      const createDefinitions = [];
-      if (!hasLimitField) {
-        createDefinitions.push({
-          key: "limit_one_gift_per_order",
-          name: "Limit to one gift per order",
-          type: "boolean",
-        });
-      }
-      if (!hasAnyProductField) {
-        createDefinitions.push({
-          key: "applies_to_any_product",
-          name: "Applies to any product",
-          type: "boolean",
-        });
-      }
-      const updateResponse = await shopifyAdminGraphql(
-        shop,
-        accessToken,
-        `
-          mutation UpdateBxgyDefinition($id: ID!, $definition: MetaobjectDefinitionUpdateInput!) {
-            metaobjectDefinitionUpdate(id: $id, definition: $definition) {
-              metaobjectDefinition {
-                id
-              }
-              userErrors {
-                field
-                message
-                code
-              }
-            }
-          }
-        `,
-        {
-          id: match.id,
-          definition: {
-            fieldDefinitions: createDefinitions.map((definition) => ({ create: definition })),
-          },
-        },
-      );
-
-      const updateErrors = updateResponse?.data?.metaobjectDefinitionUpdate?.userErrors ?? [];
-      if (Array.isArray(updateErrors) && updateErrors.length > 0) {
-        const first = updateErrors[0];
-        const message = String(first?.message ?? "");
-        if (!/already exists/i.test(message)) {
-          throw new Error(message || "Failed to update BXGY definition");
-        }
-      }
-    }
-
-    return resolved.type;
-  }
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation CreateBxgyDefinition($definition: MetaobjectDefinitionCreateInput!) {
-        metaobjectDefinitionCreate(definition: $definition) {
-          metaobjectDefinition {
-            type
-          }
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }
-    `,
-    {
-      definition: {
-        name: DEFINITION_NAME,
-        type: TYPE,
-        access: {
-          admin: "MERCHANT_READ_WRITE",
-          storefront: "PUBLIC_READ",
-        },
-        fieldDefinitions: [
-          { name: "Enabled", key: "enabled", type: "boolean" },
-          { name: "Rule name", key: "name", type: "single_line_text_field" },
-          { name: "Buy products", key: "buy_products", type: "multi_line_text_field" },
-          { name: "Applies to any product", key: "applies_to_any_product", type: "boolean" },
-          { name: "Gift product", key: "gift_product", type: "multi_line_text_field" },
-          { name: "Buy quantity", key: "buy_quantity", type: "number_integer" },
-          { name: "Gift quantity", key: "gift_quantity", type: "number_integer" },
-          { name: "Limit to one gift per order", key: "limit_one_gift_per_order", type: "boolean" },
-          { name: "Message", key: "message", type: "multi_line_text_field" },
-          { name: "Auto add", key: "auto_add", type: "boolean" },
-          { name: "Priority", key: "priority", type: "number_integer" },
-        ],
-      },
-    },
-  );
-
-  const errors = response?.data?.metaobjectDefinitionCreate?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    const first = errors[0];
-    const message = String(first?.message ?? "");
-    if (!/already exists/i.test(message)) {
-      throw new Error(message || "Failed to create BXGY definition");
-    }
-  }
-
-  return TYPE;
-}
-
-function mapRule(handle: string, fields: Array<{ key: string; value: string }>): BxgyRule {
-  const buyProducts = parseJson<BxgyProduct[]>(getFieldValue(fields, "buy_products"), []).filter(
-    (product) => Boolean(product?.productId) && Boolean(product?.variantId),
-  );
-  const giftProduct = parseJson<BxgyProduct | null>(getFieldValue(fields, "gift_product"), null);
-
+function rowToRule(row: Record<string, unknown>): BxgyRule {
   return {
-    id: handle,
-    name: String(getFieldValue(fields, "name") ?? "").trim() || "Buy X Get Y",
-    buyProducts,
-    appliesToAnyProduct: String(getFieldValue(fields, "applies_to_any_product") ?? "false") === "true",
-    giftProduct: giftProduct?.productId && giftProduct?.variantId ? giftProduct : null,
-    buyQuantity: normalizePositiveInt(getFieldValue(fields, "buy_quantity"), 1),
-    giftQuantity: normalizePositiveInt(getFieldValue(fields, "gift_quantity"), 1),
-    limitOneGiftPerOrder: String(getFieldValue(fields, "limit_one_gift_per_order") ?? "false") === "true",
-    message: String(getFieldValue(fields, "message") ?? "").trim(),
-    autoAdd: String(getFieldValue(fields, "auto_add") ?? "true") !== "false",
-    priority: normalizePositiveInt(getFieldValue(fields, "priority"), 1),
-    enabled: String(getFieldValue(fields, "enabled") ?? "true") !== "false",
+    id: String(row.id),
+    name: String(row.name || "Buy X Get Y"),
+    buyProducts: Array.isArray(row.buy_products) ? (row.buy_products as BxgyProduct[]) : [],
+    appliesToAnyProduct: Boolean(row.applies_to_any_product),
+    giftProduct: row.gift_product ? (row.gift_product as BxgyProduct) : null,
+    buyQuantity: normalizePositiveInt(row.buy_quantity, 1),
+    giftQuantity: normalizePositiveInt(row.gift_quantity, 1),
+    limitOneGiftPerOrder: Boolean(row.limit_one_gift_per_order),
+    message: String(row.message || ""),
+    autoAdd: row.auto_add !== false,
+    priority: normalizePositiveInt(row.priority, 1),
+    enabled: row.enabled !== false,
   };
 }
 
-export async function listBxgyRules(shop: string, accessToken: string): Promise<BxgyRule[]> {
-  const type = await ensureBxgyDefinition(shop, accessToken);
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query BxgyRules($type: String!) {
-        metaobjects(type: $type, first: 250) {
-          nodes {
-            handle
-            fields {
-              key
-              value
-            }
-          }
-        }
-      }
-    `,
-    { type },
-  );
-
-  const nodes = response?.data?.metaobjects?.nodes ?? [];
-  return nodes
-    .map((node: { handle: string; fields: Array<{ key: string; value: string }> }) =>
-      mapRule(String(node.handle), node.fields ?? []),
-    )
-    .filter((rule: BxgyRule) => (rule.appliesToAnyProduct || rule.buyProducts.length > 0) && rule.giftProduct?.variantId)
-    .sort((a: BxgyRule, b: BxgyRule) => a.priority - b.priority || a.name.localeCompare(b.name));
+export async function listBxgyRules(shop: string, _accessToken: string): Promise<BxgyRule[]> {
+  const db = getDb();
+  const rows = await db`
+    SELECT * FROM bxgy_rules
+    WHERE shop = ${shop}
+    ORDER BY priority ASC, name ASC
+  `;
+  return rows
+    .map((r) => rowToRule(r as Record<string, unknown>))
+    .filter((r) => (r.appliesToAnyProduct || r.buyProducts.length > 0) && r.giftProduct?.variantId);
 }
 
 export async function upsertBxgyRule(
   shop: string,
-  accessToken: string,
+  _accessToken: string,
   rule: Omit<BxgyRule, "id"> & { id?: string },
-) {
-  const type = await ensureBxgyDefinition(shop, accessToken);
-  const handle = rule.id?.trim() ? rule.id.trim() : `bxgy-${Date.now()}`;
+): Promise<{ id: string }> {
   if (!rule.appliesToAnyProduct && !rule.buyProducts.length) throw new Error("Select at least one Buy product");
   if (!rule.giftProduct?.variantId) throw new Error("Select a Gift product");
 
-  const fields = [
-    { key: "enabled", value: rule.enabled === false ? "false" : "true" },
-    { key: "name", value: rule.name?.trim() || "Buy X Get Y" },
-    { key: "buy_products", value: JSON.stringify(rule.buyProducts) },
-    { key: "applies_to_any_product", value: rule.appliesToAnyProduct === true ? "true" : "false" },
-    { key: "gift_product", value: JSON.stringify(rule.giftProduct) },
-    { key: "buy_quantity", value: String(normalizePositiveInt(rule.buyQuantity, 1)) },
-    { key: "gift_quantity", value: String(normalizePositiveInt(rule.giftQuantity, 1)) },
-    { key: "limit_one_gift_per_order", value: rule.limitOneGiftPerOrder === true ? "true" : "false" },
-    { key: "message", value: rule.message?.trim() || "" },
-    { key: "auto_add", value: rule.autoAdd === false ? "false" : "true" },
-    { key: "priority", value: String(normalizePositiveInt(rule.priority, 1)) },
-  ];
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation UpsertBxgyRule($type: String!, $handle: String!, $fields: [MetaobjectFieldInput!]!) {
-        metaobjectUpsert(
-          handle: { type: $type, handle: $handle }
-          metaobject: { fields: $fields }
-        ) {
-          metaobject {
-            handle
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-    { type, handle, fields },
-  );
-
-  const errors = response?.data?.metaobjectUpsert?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    throw new Error(errors[0]?.message ?? "Failed to save BXGY rule");
-  }
-
-  return { id: response?.data?.metaobjectUpsert?.metaobject?.handle ?? handle };
+  const id = rule.id?.trim() || `bxgy-${Date.now()}`;
+  const db = getDb();
+  await db`
+    INSERT INTO bxgy_rules
+      (id, shop, name, buy_products, applies_to_any_product, gift_product,
+       buy_quantity, gift_quantity, limit_one_gift_per_order, message, auto_add, priority, enabled, updated_at)
+    VALUES (
+      ${id}, ${shop},
+      ${rule.name?.trim() || "Buy X Get Y"},
+      ${db.json(JSON.parse(JSON.stringify(rule.buyProducts ?? [])))},
+      ${rule.appliesToAnyProduct ?? false},
+      ${db.json(JSON.parse(JSON.stringify(rule.giftProduct)))},
+      ${normalizePositiveInt(rule.buyQuantity, 1)},
+      ${normalizePositiveInt(rule.giftQuantity, 1)},
+      ${rule.limitOneGiftPerOrder ?? false},
+      ${rule.message?.trim() || ""},
+      ${rule.autoAdd !== false},
+      ${normalizePositiveInt(rule.priority, 1)},
+      ${rule.enabled !== false},
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name                    = EXCLUDED.name,
+      buy_products            = EXCLUDED.buy_products,
+      applies_to_any_product  = EXCLUDED.applies_to_any_product,
+      gift_product            = EXCLUDED.gift_product,
+      buy_quantity            = EXCLUDED.buy_quantity,
+      gift_quantity           = EXCLUDED.gift_quantity,
+      limit_one_gift_per_order = EXCLUDED.limit_one_gift_per_order,
+      message                 = EXCLUDED.message,
+      auto_add                = EXCLUDED.auto_add,
+      priority                = EXCLUDED.priority,
+      enabled                 = EXCLUDED.enabled,
+      updated_at              = NOW()
+  `;
+  return { id };
 }
 
-export async function deleteBxgyRule(shop: string, accessToken: string, handle: string) {
-  const type = await ensureBxgyDefinition(shop, accessToken);
-  const lookup = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query BxgyRuleId($type: String!, $handle: String!) {
-        metaobjectByHandle(handle: { type: $type, handle: $handle }) {
-          id
-        }
-      }
-    `,
-    { type, handle },
-  );
-
-  const id = lookup?.data?.metaobjectByHandle?.id as string | undefined;
-  if (!id) return;
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation DeleteBxgyRule($id: ID!) {
-        metaobjectDelete(id: $id) {
-          deletedId
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-    { id },
-  );
-
-  const errors = response?.data?.metaobjectDelete?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    throw new Error(errors[0]?.message ?? "Failed to delete BXGY rule");
-  }
+export async function deleteBxgyRule(shop: string, _accessToken: string, id: string): Promise<void> {
+  const db = getDb();
+  await db`DELETE FROM bxgy_rules WHERE shop = ${shop} AND id = ${id}`;
 }

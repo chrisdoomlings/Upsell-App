@@ -1,5 +1,5 @@
 import { shopifyAdminGraphql } from "@/lib/shopify/adminGraphql";
-import { resolveMetaobjectType } from "@/lib/shopify/metaobjectType";
+import { getDb } from "@/lib/supabase/client";
 
 export interface PostPurchaseProduct {
   productId: string;
@@ -25,21 +25,6 @@ export interface PostPurchaseOffer {
   enabled: boolean;
 }
 
-const TYPE = "$app:post_purchase_offer";
-const DEFINITION_NAME = "Post Purchase Offer";
-
-type LiveVariantNode = {
-  id?: string;
-  price?: string;
-  image?: { url?: string | null } | null;
-  product?: {
-    id?: string;
-    title?: string;
-    handle?: string;
-    featuredImage?: { url?: string | null } | null;
-  } | null;
-} | null;
-
 function normalizePositiveInt(value: unknown, fallback = 1) {
   const parsed = Number.parseInt(String(value ?? fallback), 10);
   return Number.isFinite(parsed) && parsed > 0 ? parsed : fallback;
@@ -48,21 +33,6 @@ function normalizePositiveInt(value: unknown, fallback = 1) {
 function normalizePositiveNumber(value: unknown, fallback = 0) {
   const parsed = Number.parseFloat(String(value ?? fallback));
   return Number.isFinite(parsed) && parsed >= 0 ? parsed : fallback;
-}
-
-function getFieldValue(fields: Array<{ key: string; value: string }> | null | undefined, key: string) {
-  if (!fields) return null;
-  const field = fields.find((entry) => entry?.key === key);
-  return field?.value ?? null;
-}
-
-function parseJson<T>(raw: string | null, fallback: T): T {
-  if (!raw) return fallback;
-  try {
-    return JSON.parse(raw) as T;
-  } catch {
-    return fallback;
-  }
 }
 
 function toGid(type: "Product" | "ProductVariant", value: string) {
@@ -79,68 +49,51 @@ function fromGid(value: string | undefined) {
   return match?.[1] ?? raw;
 }
 
-async function loadLiveVariants(
-  shop: string,
-  accessToken: string,
-  offers: PostPurchaseOffer[],
-) {
+type LiveVariantNode = {
+  id?: string;
+  price?: string;
+  image?: { url?: string | null } | null;
+  product?: {
+    id?: string;
+    title?: string;
+    handle?: string;
+    featuredImage?: { url?: string | null } | null;
+  } | null;
+} | null;
+
+async function loadLiveVariants(shop: string, accessToken: string, offers: PostPurchaseOffer[]) {
   const ids = Array.from(
     new Set(
       offers
-        .map((offer) => toGid("ProductVariant", String(offer.offerProduct?.variantId ?? "")))
+        .map((o) => toGid("ProductVariant", String(o.offerProduct?.variantId ?? "")))
         .filter(Boolean),
     ),
   );
+  if (!ids.length) return new Map<string, LiveVariantNode>();
 
-  if (!ids.length) {
-    return new Map<string, LiveVariantNode>();
-  }
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query PostPurchaseLiveVariants($ids: [ID!]!) {
-        nodes(ids: $ids) {
-          ... on ProductVariant {
-            id
-            price
-            image {
-              url
-            }
-            product {
-              id
-              title
-              handle
-              featuredImage {
-                url
-              }
-            }
-          }
+  const response = await shopifyAdminGraphql(shop, accessToken, `
+    query PostPurchaseLiveVariants($ids: [ID!]!) {
+      nodes(ids: $ids) {
+        ... on ProductVariant {
+          id price
+          image { url }
+          product { id title handle featuredImage { url } }
         }
       }
-    `,
-    { ids },
-  );
+    }
+  `, { ids });
 
   const nodes = Array.isArray(response?.data?.nodes) ? response.data.nodes as LiveVariantNode[] : [];
-  const liveVariants = new Map<string, LiveVariantNode>();
-
-  ids.forEach((id, index) => {
-    liveVariants.set(id, nodes[index] ?? null);
-  });
-
-  return liveVariants;
+  const map = new Map<string, LiveVariantNode>();
+  ids.forEach((id, i) => map.set(id, nodes[i] ?? null));
+  return map;
 }
 
 function hydrateOfferProduct(
   offerProduct: PostPurchaseProduct | null,
   liveVariant: LiveVariantNode,
 ): PostPurchaseProduct | null {
-  if (!offerProduct?.variantId || !liveVariant?.id || !liveVariant.product?.id) {
-    return null;
-  }
-
+  if (!offerProduct?.variantId || !liveVariant?.id || !liveVariant.product?.id) return null;
   return {
     productId: fromGid(liveVariant.product.id) || String(offerProduct.productId ?? "").trim(),
     variantId: fromGid(liveVariant.id) || String(offerProduct.variantId ?? "").trim(),
@@ -151,220 +104,99 @@ function hydrateOfferProduct(
   };
 }
 
-async function ensurePostPurchaseDefinition(shop: string, accessToken: string) {
-  const resolved = await resolveMetaobjectType(shop, accessToken, TYPE, DEFINITION_NAME);
-  if (resolved.foundDefinition) {
-    return resolved.type;
-  }
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation CreatePostPurchaseDefinition($definition: MetaobjectDefinitionCreateInput!) {
-        metaobjectDefinitionCreate(definition: $definition) {
-          metaobjectDefinition {
-            type
-          }
-          userErrors {
-            field
-            message
-            code
-          }
-        }
-      }
-    `,
-    {
-      definition: {
-        name: DEFINITION_NAME,
-        type: TYPE,
-        access: {
-          admin: "MERCHANT_READ_WRITE",
-          storefront: "PUBLIC_READ",
-        },
-        fieldDefinitions: [
-          { name: "Enabled", key: "enabled", type: "boolean" },
-          { name: "Offer name", key: "name", type: "single_line_text_field" },
-          { name: "Offer product", key: "offer_product", type: "multi_line_text_field" },
-          { name: "Headline", key: "headline", type: "single_line_text_field" },
-          { name: "Body", key: "body", type: "multi_line_text_field" },
-          { name: "CTA label", key: "cta_label", type: "single_line_text_field" },
-          { name: "Discount percent", key: "discount_percent", type: "number_integer" },
-          { name: "Priority", key: "priority", type: "number_integer" },
-          { name: "Trigger type", key: "trigger_type", type: "single_line_text_field" },
-          { name: "Trigger product ids", key: "trigger_product_ids", type: "multi_line_text_field" },
-          { name: "Minimum subtotal", key: "minimum_subtotal", type: "number_decimal" },
-        ],
-      },
-    },
-  );
-
-  const errors = response?.data?.metaobjectDefinitionCreate?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    const first = errors[0];
-    const message = String(first?.message ?? "");
-    if (!/already exists/i.test(message)) {
-      throw new Error(message || "Failed to create post-purchase definition");
-    }
-  }
-
-  return TYPE;
-}
-
-function mapOffer(handle: string, fields: Array<{ key: string; value: string }>): PostPurchaseOffer {
-  const triggerType = String(getFieldValue(fields, "trigger_type") ?? "all_orders");
-  const parsedTriggerType = triggerType === "minimum_subtotal" || triggerType === "contains_product"
-    ? triggerType
-    : "all_orders";
-  const offerProduct = parseJson<PostPurchaseProduct | null>(getFieldValue(fields, "offer_product"), null);
-
+function rowToOffer(row: Record<string, unknown>): PostPurchaseOffer {
+  const triggerType = String(row.trigger_type || "all_orders");
   return {
-    id: handle,
-    name: String(getFieldValue(fields, "name") ?? "").trim() || "Post-purchase offer",
-    offerProduct: offerProduct?.productId && offerProduct?.variantId ? offerProduct : null,
-    headline: String(getFieldValue(fields, "headline") ?? "").trim(),
-    body: String(getFieldValue(fields, "body") ?? "").trim(),
-    ctaLabel: String(getFieldValue(fields, "cta_label") ?? "").trim() || "Add to order",
-    discountPercent: normalizePositiveInt(getFieldValue(fields, "discount_percent"), 10),
-    priority: normalizePositiveInt(getFieldValue(fields, "priority"), 1),
-    triggerType: parsedTriggerType,
-    triggerProductIds: parseJson<string[]>(getFieldValue(fields, "trigger_product_ids"), []).filter(Boolean),
-    minimumSubtotal: normalizePositiveNumber(getFieldValue(fields, "minimum_subtotal"), 0),
-    enabled: String(getFieldValue(fields, "enabled") ?? "true") !== "false",
+    id: String(row.id),
+    name: String(row.name || "Post-purchase offer"),
+    offerProduct: row.offer_product ? (row.offer_product as PostPurchaseProduct) : null,
+    headline: String(row.headline || ""),
+    body: String(row.body || ""),
+    ctaLabel: String(row.cta_label || "Add to order"),
+    discountPercent: normalizePositiveInt(row.discount_percent, 10),
+    priority: normalizePositiveInt(row.priority, 1),
+    triggerType: (triggerType === "minimum_subtotal" || triggerType === "contains_product")
+      ? triggerType
+      : "all_orders",
+    triggerProductIds: Array.isArray(row.trigger_product_ids)
+      ? (row.trigger_product_ids as string[]).filter(Boolean)
+      : [],
+    minimumSubtotal: normalizePositiveNumber(row.minimum_subtotal, 0),
+    enabled: row.enabled !== false,
   };
 }
 
 export async function listPostPurchaseOffers(shop: string, accessToken: string): Promise<PostPurchaseOffer[]> {
-  const type = await ensurePostPurchaseDefinition(shop, accessToken);
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query PostPurchaseOffers($type: String!) {
-        metaobjects(type: $type, first: 250) {
-          nodes {
-            handle
-            fields {
-              key
-              value
-            }
-          }
-        }
-      }
-    `,
-    { type },
-  );
+  const db = getDb();
+  const rows = await db`
+    SELECT * FROM post_purchase_offers
+    WHERE shop = ${shop} AND enabled = true
+    ORDER BY priority ASC, name ASC
+  `;
 
-  const nodes = response?.data?.metaobjects?.nodes ?? [];
-  const offers = nodes
-    .map((node: { handle: string; fields: Array<{ key: string; value: string }> }) =>
-      mapOffer(String(node.handle), node.fields ?? []),
-    )
-    .filter((offer: PostPurchaseOffer) => offer.enabled && offer.offerProduct?.variantId);
+  const offers = rows
+    .map((r) => rowToOffer(r as Record<string, unknown>))
+    .filter((o) => o.offerProduct?.variantId);
 
   const liveVariants = await loadLiveVariants(shop, accessToken, offers);
 
   return offers
-    .map((offer: PostPurchaseOffer) => {
-      const liveVariant = liveVariants.get(toGid("ProductVariant", String(offer.offerProduct?.variantId ?? ""))) ?? null;
-      const offerProduct = hydrateOfferProduct(offer.offerProduct, liveVariant);
+    .map((offer) => {
+      const lv = liveVariants.get(toGid("ProductVariant", String(offer.offerProduct?.variantId ?? ""))) ?? null;
+      const offerProduct = hydrateOfferProduct(offer.offerProduct, lv);
       return offerProduct ? { ...offer, offerProduct } : null;
     })
-    .filter((offer: PostPurchaseOffer | null): offer is PostPurchaseOffer => Boolean(offer))
-    .sort((a: PostPurchaseOffer, b: PostPurchaseOffer) => a.priority - b.priority || a.name.localeCompare(b.name));
+    .filter((o): o is PostPurchaseOffer => Boolean(o))
+    .sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
 }
 
 export async function upsertPostPurchaseOffer(
   shop: string,
-  accessToken: string,
+  _accessToken: string,
   offer: Omit<PostPurchaseOffer, "id"> & { id?: string },
-) {
-  const type = await ensurePostPurchaseDefinition(shop, accessToken);
-  const handle = offer.id?.trim() ? offer.id.trim() : `post-purchase-${Date.now()}`;
+): Promise<{ id: string }> {
   if (!offer.offerProduct?.variantId) throw new Error("Select an offer product");
   if (!offer.name?.trim()) throw new Error("Enter an offer name");
 
-  const fields = [
-    { key: "enabled", value: offer.enabled === false ? "false" : "true" },
-    { key: "name", value: offer.name.trim() || "Post-purchase offer" },
-    { key: "offer_product", value: JSON.stringify(offer.offerProduct) },
-    { key: "headline", value: offer.headline?.trim() || "" },
-    { key: "body", value: offer.body?.trim() || "" },
-    { key: "cta_label", value: offer.ctaLabel?.trim() || "Add to order" },
-    { key: "discount_percent", value: String(normalizePositiveInt(offer.discountPercent, 10)) },
-    { key: "priority", value: String(normalizePositiveInt(offer.priority, 1)) },
-    { key: "trigger_type", value: offer.triggerType || "all_orders" },
-    { key: "trigger_product_ids", value: JSON.stringify((offer.triggerProductIds ?? []).filter(Boolean)) },
-    { key: "minimum_subtotal", value: String(normalizePositiveNumber(offer.minimumSubtotal, 0)) },
-  ];
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation UpsertPostPurchaseOffer($type: String!, $handle: String!, $fields: [MetaobjectFieldInput!]!) {
-        metaobjectUpsert(
-          handle: { type: $type, handle: $handle }
-          metaobject: { fields: $fields }
-        ) {
-          metaobject {
-            handle
-          }
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-    { type, handle, fields },
-  );
-
-  const errors = response?.data?.metaobjectUpsert?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    throw new Error(errors[0]?.message ?? "Failed to save post-purchase offer");
-  }
-
-  return { id: response?.data?.metaobjectUpsert?.metaobject?.handle ?? handle };
+  const id = offer.id?.trim() || `post-purchase-${Date.now()}`;
+  const db = getDb();
+  await db`
+    INSERT INTO post_purchase_offers
+      (id, shop, name, offer_product, headline, body, cta_label, discount_percent,
+       priority, trigger_type, trigger_product_ids, minimum_subtotal, enabled, updated_at)
+    VALUES (
+      ${id}, ${shop},
+      ${offer.name.trim()},
+      ${db.json(JSON.parse(JSON.stringify(offer.offerProduct)))},
+      ${offer.headline?.trim() || ""},
+      ${offer.body?.trim() || ""},
+      ${offer.ctaLabel?.trim() || "Add to order"},
+      ${normalizePositiveInt(offer.discountPercent, 10)},
+      ${normalizePositiveInt(offer.priority, 1)},
+      ${offer.triggerType || "all_orders"},
+      ${(offer.triggerProductIds ?? []).filter(Boolean)},
+      ${normalizePositiveNumber(offer.minimumSubtotal, 0)},
+      ${offer.enabled !== false},
+      NOW()
+    )
+    ON CONFLICT (id) DO UPDATE SET
+      name                = EXCLUDED.name,
+      offer_product       = EXCLUDED.offer_product,
+      headline            = EXCLUDED.headline,
+      body                = EXCLUDED.body,
+      cta_label           = EXCLUDED.cta_label,
+      discount_percent    = EXCLUDED.discount_percent,
+      priority            = EXCLUDED.priority,
+      trigger_type        = EXCLUDED.trigger_type,
+      trigger_product_ids = EXCLUDED.trigger_product_ids,
+      minimum_subtotal    = EXCLUDED.minimum_subtotal,
+      enabled             = EXCLUDED.enabled,
+      updated_at          = NOW()
+  `;
+  return { id };
 }
 
-export async function deletePostPurchaseOffer(shop: string, accessToken: string, handle: string) {
-  const type = await ensurePostPurchaseDefinition(shop, accessToken);
-  const lookup = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      query PostPurchaseOfferId($type: String!, $handle: String!) {
-        metaobjectByHandle(handle: { type: $type, handle: $handle }) {
-          id
-        }
-      }
-    `,
-    { type, handle },
-  );
-
-  const id = lookup?.data?.metaobjectByHandle?.id as string | undefined;
-  if (!id) return;
-
-  const response = await shopifyAdminGraphql(
-    shop,
-    accessToken,
-    `
-      mutation DeletePostPurchaseOffer($id: ID!) {
-        metaobjectDelete(id: $id) {
-          deletedId
-          userErrors {
-            field
-            message
-          }
-        }
-      }
-    `,
-    { id },
-  );
-
-  const errors = response?.data?.metaobjectDelete?.userErrors ?? [];
-  if (Array.isArray(errors) && errors.length > 0) {
-    throw new Error(errors[0]?.message ?? "Failed to delete post-purchase offer");
-  }
+export async function deletePostPurchaseOffer(shop: string, _accessToken: string, id: string): Promise<void> {
+  const db = getDb();
+  await db`DELETE FROM post_purchase_offers WHERE shop = ${shop} AND id = ${id}`;
 }
