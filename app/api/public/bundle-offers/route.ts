@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
         offerType: offer.offerType,
         productId: offer.productId,
         productTitle: offer.productTitle,
+        storefrontHandle: offer.storefrontHandle,
         storefrontTitle: offer.storefrontTitle,
         bundleLevel: offer.bundleLevel,
         itemCount: offer.items.length,

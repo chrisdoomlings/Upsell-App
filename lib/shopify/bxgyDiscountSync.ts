@@ -31,6 +31,7 @@ function buildConfig(rules: BxgyRule[]) {
       .filter((rule) => rule.enabled && rule.giftProduct?.variantId && rule.buyProducts.length > 0)
       .map((rule) => ({
         ruleId: rule.id,
+        appliesToAnyProduct: rule.appliesToAnyProduct === true,
         buyVariantIds: rule.buyProducts
           .map((product) => variantGidFromId(product.variantId))
           .filter(Boolean),
@@ -39,7 +40,7 @@ function buildConfig(rules: BxgyRule[]) {
         giftQuantity: rule.giftQuantity,
         limitOneGiftPerOrder: rule.limitOneGiftPerOrder === true,
       }))
-      .filter((rule) => rule.buyVariantIds.length > 0 && rule.giftVariantId),
+      .filter((rule) => (rule.appliesToAnyProduct || rule.buyVariantIds.length > 0) && rule.giftVariantId),
   };
 }
 

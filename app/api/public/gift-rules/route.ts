@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
 
     const rules = await getShopBxgyRulesMetafield(shop, session.accessToken);
     const simplified = rules
-      .filter((rule) => rule.enabled && rule.autoAdd && rule.buyProducts.length > 0 && rule.giftProduct?.variantId)
+      .filter((rule) => rule.enabled && rule.autoAdd && (rule.appliesToAnyProduct || rule.buyProducts.length > 0) && rule.giftProduct?.variantId)
       .map((rule) => ({
         ruleId: rule.id,
         name: rule.name,
@@ -35,6 +35,7 @@ export async function GET(req: NextRequest) {
         buyQuantity: rule.buyQuantity,
         giftQuantity: rule.giftQuantity,
         limitOneGiftPerOrder: rule.limitOneGiftPerOrder === true,
+        appliesToAnyProduct: rule.appliesToAnyProduct === true,
         priority: rule.priority,
         buyVariantIds: rule.buyProducts.map((product) => String(product.variantId)),
         giftVariantId: String(rule.giftProduct?.variantId ?? ""),

@@ -221,6 +221,7 @@ export default function BundleOffersTab() {
           offerType,
           productId,
           productTitle: selectedBundleProduct?.title ?? "",
+          storefrontHandle: selectedBundleProduct?.handle ?? "",
           storefrontTitle,
           bundleLevel,
           items: preparedItems,

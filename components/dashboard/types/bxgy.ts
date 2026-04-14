@@ -11,6 +11,7 @@ export interface BxgyRule {
   id: string;
   name: string;
   buyProducts: BxgyProduct[];
+  appliesToAnyProduct?: boolean;
   giftProduct: BxgyProduct | null;
   buyQuantity: number;
   giftQuantity: number;

@@ -15,6 +15,7 @@ export type BundleOffer = {
   offerType: "bundle" | "product";
   productId: string;
   productTitle: string;
+  storefrontHandle?: string;
   storefrontTitle: string;
   bundleLevel: "product" | "variant";
   items: BundleOfferItem[];
@@ -97,6 +98,7 @@ function normalizeOffer(input: Partial<BundleOffer>, existing?: BundleOffer | nu
     offerType: normalizeOfferType(input.offerType ?? existing?.offerType),
     productId: String(input.productId || existing?.productId || "").trim(),
     productTitle: String(input.productTitle || existing?.productTitle || "").trim(),
+    storefrontHandle: String(input.storefrontHandle || existing?.storefrontHandle || "").trim() || undefined,
     storefrontTitle: String(input.storefrontTitle || existing?.storefrontTitle || "").trim(),
     bundleLevel: normalizeBundleLevel(input.bundleLevel ?? existing?.bundleLevel),
     items: normalizeItems(input.items, existing?.items),

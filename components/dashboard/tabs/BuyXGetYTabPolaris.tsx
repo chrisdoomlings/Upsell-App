@@ -47,6 +47,7 @@ export default function BuyXGetYTabPolaris() {
   const [message, setMessage] = useState("Free gift added automatically when the rule qualifies.");
   const [priority, setPriority] = useState("1");
   const [autoAdd, setAutoAdd] = useState(true);
+  const [appliesToAnyProduct, setAppliesToAnyProduct] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [buyProductIds, setBuyProductIds] = useState<string[]>([""]);
   const [buyVariantIds, setBuyVariantIds] = useState<string[]>([""]);
@@ -121,6 +122,7 @@ export default function BuyXGetYTabPolaris() {
     setLimitOneGiftPerOrder(false);
     setPriority("1");
     setAutoAdd(true);
+    setAppliesToAnyProduct(false);
     setBuyProductIds([""]);
     setBuyVariantIds([""]);
     setGiftProductId("");
@@ -136,6 +138,7 @@ export default function BuyXGetYTabPolaris() {
     setMessage(rule.message);
     setPriority(String(rule.priority));
     setAutoAdd(rule.autoAdd);
+    setAppliesToAnyProduct(rule.appliesToAnyProduct === true);
     setBuyProductIds(rule.buyProducts.map((p) => p.productId));
     setBuyVariantIds(rule.buyProducts.map((p) => p.variantId));
     setGiftProductId(rule.giftProduct?.productId ?? "");
@@ -194,7 +197,7 @@ export default function BuyXGetYTabPolaris() {
       setSuccessMessage(null);
       return;
     }
-    if (buyProducts.length === 0) {
+    if (!appliesToAnyProduct && buyProducts.length === 0) {
       setError("Select at least one Buy product.");
       setSuccessMessage(null);
       return;
@@ -216,7 +219,8 @@ export default function BuyXGetYTabPolaris() {
         body: JSON.stringify({
           id: editingId ?? undefined,
           name,
-          buyProducts,
+          buyProducts: appliesToAnyProduct ? [] : buyProducts,
+          appliesToAnyProduct,
           giftProduct,
           buyQuantity,
           giftQuantity,
@@ -283,7 +287,7 @@ export default function BuyXGetYTabPolaris() {
   }
 
   const selectedGiftProduct = products.find((product) => String(product.id) === giftProductId);
-  const selectedTriggerCount = buyProductIds[0] ? 1 : 0;
+  const selectedTriggerCount = appliesToAnyProduct ? 0 : (buyProductIds[0] ? 1 : 0);
   const selectedGiftLabel = selectedGiftProduct ? selectedGiftProduct.title : "Choose a gift product";
   const helpBadgeButton: React.CSSProperties = {
     width: 22,
@@ -363,7 +367,7 @@ export default function BuyXGetYTabPolaris() {
 
           <InlineGrid columns={{ xs: 1, md: 3 }} gap="300">
             {[
-              { label: "Main product", value: selectedTriggerCount ? "1 selected" : "Choose product" },
+              { label: "Main product", value: appliesToAnyProduct ? "Any product in store" : selectedTriggerCount ? "1 selected" : "Choose product" },
               { label: "Gift product", value: selectedGiftLabel },
               { label: "Rule outcome", value: limitOneGiftPerOrder ? "One free gift max" : `Buy ${buyQuantity || "1"}, get ${giftQuantity || "1"}` },
             ].map((item) => (
@@ -401,6 +405,7 @@ export default function BuyXGetYTabPolaris() {
                 <TextField label="Gift message" value={message} onChange={setMessage} autoComplete="off" helpText="Short shopper-facing text for the free gift experience." />
                 <Checkbox label="Limit to one gift per cart even if more items qualify" checked={limitOneGiftPerOrder} onChange={setLimitOneGiftPerOrder} helpText="Turn this on if you want the shopper to receive only one gift batch per cart." />
                 <Checkbox label="Auto-add gift when the rule qualifies" checked={autoAdd} onChange={setAutoAdd} helpText="Turn this on if you want the app to place the gift into the cart automatically." />
+                <Checkbox label="Qualify when any product in the store is added" checked={appliesToAnyProduct} onChange={setAppliesToAnyProduct} helpText="Use this if you want the shopper to receive the free gift when they add any non-gift product to cart." />
               </BlockStack>
             </Card>
 
@@ -453,10 +458,16 @@ export default function BuyXGetYTabPolaris() {
                       </Tooltip>
                     </InlineStack>
                     <Text as="p" variant="bodySm" tone="subdued">
-                      Choose the product that unlocks the free gift when the customer reaches the Buy quantity.
+                      {appliesToAnyProduct
+                        ? "Any non-gift product in the cart can unlock the free gift when the customer reaches the Buy quantity."
+                        : "Choose the product that unlocks the free gift when the customer reaches the Buy quantity."}
                     </Text>
                   </BlockStack>
-                  {(() => {
+                  {appliesToAnyProduct ? (
+                    <Banner tone="info">
+                      This rule will qualify on any product in the store, so no specific main product needs to be selected.
+                    </Banner>
+                  ) : (() => {
                     const selectedProduct = products.find((product) => String(product.id) === buyProductIds[0]);
                     const variantOptions = selectedProduct?.variants?.map((variant) => ({
                       label: variant.title,
@@ -532,7 +543,7 @@ export default function BuyXGetYTabPolaris() {
                   </BlockStack>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
-                  <Text as="p" variant="bodySm">{rule.buyProducts.map((p) => p.title).join(", ")}</Text>
+                  <Text as="p" variant="bodySm">{rule.appliesToAnyProduct ? "Any product in store" : rule.buyProducts.map((p) => p.title).join(", ")}</Text>
                 </IndexTable.Cell>
                 <IndexTable.Cell>
                   <InlineStack gap="200" blockAlign="center">
@@ -602,14 +613,14 @@ export default function BuyXGetYTabPolaris() {
           {
             title: "Getting started",
             body: [
-              "Choose a main product, choose a gift product, then decide how many of the main product the shopper must buy before the gift is unlocked.",
+              "Choose a main product, or switch the rule to any product in store, then choose a gift product and decide how many items the shopper must buy before the gift is unlocked.",
               "Once the shopper qualifies, the app can automatically place the free gift into the cart for them.",
             ],
           },
           {
             title: "Field guide",
             body: [
-              "Main product is the product the shopper must buy to unlock the offer. Buy quantity is how many they must add before the gift is unlocked.",
+              "Main product is the product the shopper must buy to unlock the offer. If you turn on any-product mode, then any non-gift product in the store can unlock it.",
               "Gift product is the free item the shopper receives. Gift quantity is how many free gift items they receive when the offer is unlocked.",
               "Turn on the gift limit option if you want the shopper to receive the gift only once, even if they add more qualifying items.",
             ],

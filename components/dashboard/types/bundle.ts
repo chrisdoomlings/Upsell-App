@@ -13,6 +13,7 @@ export interface BundleOffer {
   offerType: "bundle" | "product";
   productId: string;
   productTitle: string;
+  storefrontHandle?: string;
   storefrontTitle: string;
   bundleLevel: "product" | "variant";
   items: BundleOfferItem[];

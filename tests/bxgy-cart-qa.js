@@ -155,6 +155,33 @@ const cases = [
       assert.equal(result.shouldAdd, true);
     },
   },
+  {
+    name: "any-product mode qualifies on non-gift cart items",
+    run() {
+      const result = evaluateRule(cart([line("random-1", 2)]), {
+        ...RULE,
+        appliesToAnyProduct: true,
+        buyVariantIds: [],
+      });
+      assert.equal(result.buyQty, 2);
+      assert.equal(result.desiredQty, 2);
+      assert.equal(result.shouldAdd, true);
+    },
+  },
+  {
+    name: "any-product mode ignores gift lines when counting quantity",
+    run() {
+      const result = evaluateRule(cart([
+        line("random-1", 1),
+        line("gift-1", 1, { _bxgy: "true", _bxgy_rule_id: "rule-1" }),
+      ]), {
+        ...RULE,
+        appliesToAnyProduct: true,
+        buyVariantIds: [],
+      });
+      assert.equal(result.buyQty, 1);
+    },
+  },
 ];
 
 let failed = false;

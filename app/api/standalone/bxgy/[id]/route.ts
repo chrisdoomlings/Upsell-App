@@ -26,6 +26,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       ...existing,
       ...(body.name !== undefined && { name: String(body.name) }),
       ...(Array.isArray(body.buyProducts) && { buyProducts: body.buyProducts }),
+      ...(typeof body.appliesToAnyProduct === "boolean" && { appliesToAnyProduct: body.appliesToAnyProduct }),
       ...(body.giftProduct !== undefined && { giftProduct: body.giftProduct }),
       ...(body.buyQuantity !== undefined && { buyQuantity: Number(body.buyQuantity) }),
       ...(body.giftQuantity !== undefined && { giftQuantity: Number(body.giftQuantity) }),

@@ -69,6 +69,7 @@ export async function POST(req: NextRequest) {
       id: body.id,
       name: body.name || "",
       buyProducts: Array.isArray(body.buyProducts) ? body.buyProducts : [],
+      appliesToAnyProduct: body.appliesToAnyProduct === true,
       giftProduct: body.giftProduct ?? null,
       buyQuantity: Number(body.buyQuantity) || 1,
       giftQuantity: Number(body.giftQuantity) || 1,

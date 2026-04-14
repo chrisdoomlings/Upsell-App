@@ -14,6 +14,7 @@ export interface BxgyRule {
   id: string;
   name: string;
   buyProducts: BxgyProduct[];
+  appliesToAnyProduct?: boolean;
   giftProduct: BxgyProduct | null;
   buyQuantity: number;
   giftQuantity: number;
@@ -90,8 +91,26 @@ async function ensureBxgyDefinition(shop: string, accessToken: string) {
     const hasLimitField = (match?.fieldDefinitions ?? []).some(
       (field: { key?: string }) => String(field?.key ?? "") === "limit_one_gift_per_order",
     );
+    const hasAnyProductField = (match?.fieldDefinitions ?? []).some(
+      (field: { key?: string }) => String(field?.key ?? "") === "applies_to_any_product",
+    );
 
-    if (match?.id && !hasLimitField) {
+    if (match?.id && (!hasLimitField || !hasAnyProductField)) {
+      const createDefinitions = [];
+      if (!hasLimitField) {
+        createDefinitions.push({
+          key: "limit_one_gift_per_order",
+          name: "Limit to one gift per order",
+          type: "boolean",
+        });
+      }
+      if (!hasAnyProductField) {
+        createDefinitions.push({
+          key: "applies_to_any_product",
+          name: "Applies to any product",
+          type: "boolean",
+        });
+      }
       const updateResponse = await shopifyAdminGraphql(
         shop,
         accessToken,
@@ -112,15 +131,7 @@ async function ensureBxgyDefinition(shop: string, accessToken: string) {
         {
           id: match.id,
           definition: {
-            fieldDefinitions: [
-              {
-                create: {
-                  key: "limit_one_gift_per_order",
-                  name: "Limit to one gift per order",
-                  type: "boolean",
-                },
-              },
-            ],
+            fieldDefinitions: createDefinitions.map((definition) => ({ create: definition })),
           },
         },
       );
@@ -167,6 +178,7 @@ async function ensureBxgyDefinition(shop: string, accessToken: string) {
           { name: "Enabled", key: "enabled", type: "boolean" },
           { name: "Rule name", key: "name", type: "single_line_text_field" },
           { name: "Buy products", key: "buy_products", type: "multi_line_text_field" },
+          { name: "Applies to any product", key: "applies_to_any_product", type: "boolean" },
           { name: "Gift product", key: "gift_product", type: "multi_line_text_field" },
           { name: "Buy quantity", key: "buy_quantity", type: "number_integer" },
           { name: "Gift quantity", key: "gift_quantity", type: "number_integer" },
@@ -201,6 +213,7 @@ function mapRule(handle: string, fields: Array<{ key: string; value: string }>):
     id: handle,
     name: String(getFieldValue(fields, "name") ?? "").trim() || "Buy X Get Y",
     buyProducts,
+    appliesToAnyProduct: String(getFieldValue(fields, "applies_to_any_product") ?? "false") === "true",
     giftProduct: giftProduct?.productId && giftProduct?.variantId ? giftProduct : null,
     buyQuantity: normalizePositiveInt(getFieldValue(fields, "buy_quantity"), 1),
     giftQuantity: normalizePositiveInt(getFieldValue(fields, "gift_quantity"), 1),
@@ -238,7 +251,7 @@ export async function listBxgyRules(shop: string, accessToken: string): Promise<
     .map((node: { handle: string; fields: Array<{ key: string; value: string }> }) =>
       mapRule(String(node.handle), node.fields ?? []),
     )
-    .filter((rule: BxgyRule) => rule.buyProducts.length > 0 && rule.giftProduct?.variantId)
+    .filter((rule: BxgyRule) => (rule.appliesToAnyProduct || rule.buyProducts.length > 0) && rule.giftProduct?.variantId)
     .sort((a: BxgyRule, b: BxgyRule) => a.priority - b.priority || a.name.localeCompare(b.name));
 }
 
@@ -249,13 +262,14 @@ export async function upsertBxgyRule(
 ) {
   const type = await ensureBxgyDefinition(shop, accessToken);
   const handle = rule.id?.trim() ? rule.id.trim() : `bxgy-${Date.now()}`;
-  if (!rule.buyProducts.length) throw new Error("Select at least one Buy product");
+  if (!rule.appliesToAnyProduct && !rule.buyProducts.length) throw new Error("Select at least one Buy product");
   if (!rule.giftProduct?.variantId) throw new Error("Select a Gift product");
 
   const fields = [
     { key: "enabled", value: rule.enabled === false ? "false" : "true" },
     { key: "name", value: rule.name?.trim() || "Buy X Get Y" },
     { key: "buy_products", value: JSON.stringify(rule.buyProducts) },
+    { key: "applies_to_any_product", value: rule.appliesToAnyProduct === true ? "true" : "false" },
     { key: "gift_product", value: JSON.stringify(rule.giftProduct) },
     { key: "buy_quantity", value: String(normalizePositiveInt(rule.buyQuantity, 1)) },
     { key: "gift_quantity", value: String(normalizePositiveInt(rule.giftQuantity, 1)) },

@@ -361,6 +361,22 @@ return ids.has(String(item.variant_id)) ? sum + Number(item.quantity || 0) : sum
 }, 0);
 }
 
+function totalQtyAnyProduct(cart, giftVariantId) {
+return ((cart && cart.items) || []).reduce(function (sum, item) {
+var props = item && item.properties ? item.properties : {};
+if (String(props[GIFT_FLAG] || '') === 'true') return sum;
+if (giftVariantId && String(item.variant_id) === String(giftVariantId)) return sum;
+return sum + Number(item.quantity || 0);
+}, 0);
+}
+
+function getBuyQty(cart, rule) {
+if (rule && rule.appliesToAnyProduct) {
+return totalQtyAnyProduct(cart, rule.giftVariantId);
+}
+return totalQtyByVariants(cart, rule.buyVariantIds);
+}
+
 function findAutoGiftLine(cart, variantId, ruleId) {
 var items = (cart && cart.items) || [];
 for (var i = 0; i < items.length; i++) {
@@ -390,9 +406,9 @@ function updateDismissedGifts(prevCart, nextCart, rules) {
 if (!prevCart || !Array.isArray(rules) || !rules.length) return;
 
 rules.forEach(function (rule) {
-if (!rule || !rule.giftVariantId || !rule.buyVariantIds || !rule.buyVariantIds.length) return;
+if (!rule || !rule.giftVariantId || (!rule.appliesToAnyProduct && (!rule.buyVariantIds || !rule.buyVariantIds.length))) return;
 
-var buyQty = totalQtyByVariants(nextCart, rule.buyVariantIds);
+var buyQty = getBuyQty(nextCart, rule);
 var bundleCount = Math.floor(buyQty / Math.max(Number(rule.buyQuantity || 1), 1));
 var nextGiftLine = findAutoGiftLine(nextCart, rule.giftVariantId, rule.ruleId);
 var prevGiftLine = findAutoGiftLine(prevCart, rule.giftVariantId, rule.ruleId);
@@ -556,9 +572,9 @@ var actions = [];
 var trackedQualification = false;
 
 rules.forEach(function (rule) {
-if (!rule || !rule.giftVariantId || !rule.buyVariantIds || !rule.buyVariantIds.length) return;
+if (!rule || !rule.giftVariantId || (!rule.appliesToAnyProduct && (!rule.buyVariantIds || !rule.buyVariantIds.length))) return;
 
-var buyQty = totalQtyByVariants(cart, rule.buyVariantIds);
+var buyQty = getBuyQty(cart, rule);
 var giftLine = findAutoGiftLine(cart, rule.giftVariantId, rule.ruleId);
 var manualGift = hasManualGift(cart, rule.giftVariantId);
 var bundleCount = Math.floor(buyQty / Math.max(Number(rule.buyQuantity || 1), 1));

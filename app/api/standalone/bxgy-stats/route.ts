@@ -24,7 +24,7 @@ export async function GET(req: NextRequest) {
       return {
         ...stat,
         name: rule?.name ?? "Buy X Get Y",
-        buyLabel: rule?.buyProducts.map((product) => product.title).join(", ") ?? "",
+        buyLabel: rule?.appliesToAnyProduct ? "Any product in store" : rule?.buyProducts.map((product) => product.title).join(", ") ?? "",
         giftLabel: rule?.giftProduct?.title ?? "",
         message: rule?.message ?? "",
       };

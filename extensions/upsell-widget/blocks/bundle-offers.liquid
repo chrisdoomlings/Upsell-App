@@ -24,6 +24,23 @@ color: rgba(17, 24, 39, 0.68);
 font-size: 0.74rem;
 line-height: 1.45;
 }
+
+.upsale-bundle-sale-row {
+display: flex;
+align-items: baseline;
+gap: 0.55rem;
+flex-wrap: wrap;
+}
+
+.upsale-bundle-sale-price {
+color: rgb(var(--color-sale-price, 196 48 28));
+font-weight: 700;
+}
+
+.upsale-bundle-compare-price {
+color: rgba(17, 24, 39, 0.62);
+text-decoration: line-through;
+}
 </style>
 
 <script>
@@ -158,6 +175,88 @@ upsertCodeNote(priceComponent, offer);
 upsertBundleItemsNote(priceComponent, offer);
 }
 
+function normalizeHandleFromHref(href) {
+var value = String(href || '');
+if (!value) return '';
+try {
+var parsed = new URL(value, window.location.origin);
+var match = parsed.pathname.match(/\/products\/([^/?#]+)/i);
+return match ? decodeURIComponent(match[1]) : '';
+} catch (error) {
+var fallback = value.match(/\/products\/([^/?#]+)/i);
+return fallback ? decodeURIComponent(fallback[1]) : '';
+}
+}
+
+function findCardCandidates() {
+return document.querySelectorAll('a[href*="/products/"], [data-product-id], [data-product-handle]');
+}
+
+function findOfferForNode(node) {
+if (!(node instanceof HTMLElement)) return null;
+
+var directProductId = String(node.dataset.productId || '').trim();
+if (directProductId && offerByProductId[directProductId]) {
+return offerByProductId[directProductId];
+}
+
+var directHandle = String(node.dataset.productHandle || '').trim();
+if (directHandle) {
+var normalizedDirectHandle = directHandle.toLowerCase();
+for (var i = 0; i < offers.length; i++) {
+var directOffer = offers[i];
+if (String(directOffer.storefrontHandle || '').trim().toLowerCase() === normalizedDirectHandle) {
+return directOffer;
+}
+}
+}
+
+if (node instanceof HTMLAnchorElement) {
+var anchorHandle = normalizeHandleFromHref(node.getAttribute('href'));
+if (anchorHandle) {
+var normalizedAnchorHandle = anchorHandle.toLowerCase();
+for (var j = 0; j < offers.length; j++) {
+var anchorOffer = offers[j];
+if (String(anchorOffer.storefrontHandle || '').trim().toLowerCase() === normalizedAnchorHandle) {
+return anchorOffer;
+}
+}
+}
+}
+
+return null;
+}
+
+function findCardRoot(node) {
+if (!(node instanceof HTMLElement)) return null;
+return node.closest('product-card, .product-card, .card-product, .product-item, .grid__item, li, .swiper-slide, .card-wrapper, .product-block');
+}
+
+function findFallbackPriceHost(cardRoot) {
+if (!(cardRoot instanceof HTMLElement)) return null;
+return cardRoot.querySelector(
+  'product-price, .price, .price-list, .card-information .price, .card-information__wrapper .price, .product-card__price, .card-product-price, .price-item'
+);
+}
+
+function applyFallbackPriceOverride(cardRoot, offer) {
+if (!(cardRoot instanceof HTMLElement) || !offer) return;
+
+var priceHost = findFallbackPriceHost(cardRoot);
+if (!(priceHost instanceof HTMLElement)) return;
+if (priceHost.closest('[data-upsale-bundle-rendered="true"]')) return;
+
+priceHost.setAttribute('data-upsale-bundle-rendered', 'true');
+priceHost.innerHTML =
+  '<div class="upsale-bundle-sale-row">' +
+    '<span class="upsale-bundle-sale-price">' + fmt(offer.discountedPrice) + '</span>' +
+    '<span class="upsale-bundle-compare-price">' + fmt(offer.compareAtPrice) + '</span>' +
+  '</div>';
+
+upsertCodeNote(priceHost, offer);
+upsertBundleItemsNote(priceHost, offer);
+}
+
 function paintBundlePrices() {
 document.querySelectorAll('product-price[data-product-id]').forEach(function (priceComponent) {
 if (!(priceComponent instanceof HTMLElement)) return;
@@ -166,6 +265,21 @@ if (!productId) return;
 var offer = offerByProductId[productId];
 if (!offer) return;
 applyPriceOverride(priceComponent, offer);
+});
+
+findCardCandidates().forEach(function (node) {
+if (!(node instanceof HTMLElement)) return;
+var offer = findOfferForNode(node);
+if (!offer) return;
+
+var cardRoot = findCardRoot(node) || node;
+var priceComponent = cardRoot.querySelector('product-price[data-product-id], [data-product-id] product-price');
+if (priceComponent instanceof HTMLElement) {
+  applyPriceOverride(priceComponent, offer);
+  return;
+}
+
+applyFallbackPriceOverride(cardRoot, offer);
 });
 }
 
