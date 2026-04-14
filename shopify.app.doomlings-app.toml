@@ -2,7 +2,7 @@
 
 client_id = "09e4dbd4912d9d3068b9a96412deb126"
 name = "UpSell App"
-application_url = "https://reviews-rewards-app.vercel.app/"
+application_url = "https://upseller-app.vercel.app"
 embedded = true
 
 [webhooks]
@@ -14,8 +14,8 @@ scopes = "read_analytics,read_cart_transforms,read_customers,read_discounts,read
 
 [auth]
 redirect_urls = [
-  "https://reviews-rewards-app.vercel.app/auth/callback",
-  "https://reviews-rewards-app.vercel.app/standalone/callback"
+  "https://upseller-app.vercel.app/auth/callback",
+  "https://upseller-app.vercel.app/standalone/callback"
 ]
 
 [pos]

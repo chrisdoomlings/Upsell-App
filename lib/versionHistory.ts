@@ -8,7 +8,7 @@ export type VersionHistoryEntry = {
 
 export const VERSION_HISTORY: VersionHistoryEntry[] = [
   {
-    version: "0.4.0",
+    version: "1.2",
     releasedOn: "2026-04-14",
     title: "Dashboard Updates And Rule Improvements",
     summary: "Added dashboard-facing release tracking and expanded campaign targeting across upsells and BXGY.",
@@ -20,7 +20,7 @@ export const VERSION_HISTORY: VersionHistoryEntry[] = [
     ],
   },
   {
-    version: "0.3.0",
+    version: "1.1",
     releasedOn: "2026-04-13",
     title: "Bundle And Offer Improvements",
     summary: "Improved storefront bundle pricing display and expanded storefront discount behavior.",
