@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
+import { LATEST_VERSION_ENTRY } from "@/lib/versionHistory";
 
 const TABS = [
   {
@@ -124,12 +125,23 @@ const TABS = [
       </svg>
     ),
   },
+  {
+    key: "history",
+    label: "Version History",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <path d="M12 8v4l3 3" />
+        <path d="M3.05 11a9 9 0 1 1 .5 4" />
+        <path d="M3 4v5h5" />
+      </svg>
+    ),
+  },
 ] as const;
 
 const NAV_GROUPS: { label: string; keys: Array<typeof TABS[number]["key"]> }[] = [
   { label: "", keys: ["overview", "stats", "products"] },
   { label: "Features", keys: ["upsells", "buyxgety", "postpurchase", "bundles"] },
-  { label: "Tools", keys: ["cartlimits", "customcursor", "themeswitcher"] },
+  { label: "Tools", keys: ["cartlimits", "customcursor", "themeswitcher", "history"] },
 ];
 
 type TabKey = typeof TABS[number]["key"];
@@ -397,6 +409,9 @@ export default function DashboardShell({
             <p style={{ margin: 0, fontWeight: 600, fontSize: "0.95rem", color: "#111827", minWidth: 0 }}>
               {TABS.find((t) => t.key === tab)?.label ?? "Dashboard"}
             </p>
+            <span style={{ fontSize: "0.75rem", color: "#6b7280", whiteSpace: "nowrap" }}>
+              Updated {LATEST_VERSION_ENTRY.releasedOn} · {LATEST_VERSION_ENTRY.version}
+            </span>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", gap: isMobile ? "0.8rem" : "1rem", flexWrap: "wrap", marginLeft: isMobile ? "3rem" : 0 }}>
