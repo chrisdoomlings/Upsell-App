@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyRequest } from "@/lib/utils/verifyRequest";
 import { getShopify } from "@/lib/shopify/client";
-import { getShop } from "@/lib/firebase/shopStore";
+import { getShop } from "@/lib/shopStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

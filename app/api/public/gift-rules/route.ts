@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { getShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { ensureInstalledPublicShop } from "@/lib/utils/publicShopAccess";
 
@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop!}`);
+    const session = await sessionStorage.loadSession(`offline_${shop!}`);
     if (!session?.accessToken) return NextResponse.json({ rules: [] }, { headers: CORS });
 
     const rules = await getShopBxgyRulesMetafield(shop, session.accessToken);

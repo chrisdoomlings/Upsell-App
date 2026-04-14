@@ -1,8 +1,8 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { saveShop } from "@/lib/firebase/shopStore";
+import { saveShop } from "@/lib/shopStore";
 import { signShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { Session } from "@shopify/shopify-api";
 
 export const runtime = "nodejs";
@@ -72,7 +72,7 @@ export async function GET(req: NextRequest) {
       ["accessToken", access_token],
       ["scope", "write_orders,write_products,read_products,read_themes,write_themes,read_customers,read_analytics,write_discounts,read_discounts,read_cart_transforms,write_cart_transforms"],
     ]);
-    await firestoreSessionStorage.storeSession(session);
+    await sessionStorage.storeSession(session);
 
     // Save shop metadata
     await saveShop(shop, { installedAt: new Date().toISOString(), uninstalledAt: null });

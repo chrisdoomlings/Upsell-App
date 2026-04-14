@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getShopify } from "@/lib/shopify/client";
 import { incrementDailyOrder, decrementDailyOrder } from "@/lib/firebase/analyticsStore";
 import { trackRevenueAttribution } from "@/lib/firebase/statsStore";
-import { markUninstalled, deleteShopAllData } from "@/lib/firebase/shopStore";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { markUninstalled, deleteShopAllData } from "@/lib/shopStore";
+import { sessionStorage } from "@/lib/sessionStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -108,10 +108,10 @@ export async function POST(req: NextRequest) {
 
       case "app/uninstalled": {
         await markUninstalled(shop);
-        const sessions = await firestoreSessionStorage.findSessionsByShop(shop);
+        const sessions = await sessionStorage.findSessionsByShop(shop);
         const ids = sessions.map((s) => s.id);
         if (ids.length > 0) {
-          await firestoreSessionStorage.deleteSessions(ids);
+          await sessionStorage.deleteSessions(ids);
         }
         break;
       }

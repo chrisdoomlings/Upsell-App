@@ -1,6 +1,6 @@
 import "@shopify/shopify-api/adapters/node";
 import { shopifyApi, LATEST_API_VERSION, LogSeverity, type Shopify } from "@shopify/shopify-api";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 
 let _shopify: Shopify | null = null;
 
@@ -34,7 +34,7 @@ export function getShopify(): Shopify {
     hostName: (process.env.HOST ?? "").replace(/^https?:\/\//, ""),
     apiVersion: LATEST_API_VERSION,
     isEmbeddedApp: true,
-    sessionStorage: firestoreSessionStorage,
+    sessionStorage,
     logger: {
       level:
         process.env.NODE_ENV === "production"

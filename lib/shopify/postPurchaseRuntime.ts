@@ -1,5 +1,5 @@
 import { createHmac, randomUUID } from "crypto";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { trackPostPurchaseEvent, addPostPurchaseRevenue } from "@/lib/firebase/postPurchaseStatsStore";
 import { getShopify } from "@/lib/shopify/client";
 import { listPostPurchaseOffers, type PostPurchaseOffer } from "@/lib/shopify/postPurchaseOfferStore";
@@ -93,7 +93,7 @@ export async function verifyCheckoutRequest(authHeader: string | null, fallbackS
 
   const payload = await getShopify().session.decodeSessionToken(token, { checkAudience: false }) as CheckoutJwtPayload;
   const shop = getShopFromPayload(payload, fallbackShopDomain);
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   if (!session?.accessToken) throw new Error("No access token");
 
   return { shop, accessToken: session.accessToken, payload };

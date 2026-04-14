@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { listThemes, publishTheme } from "@/lib/shopify/themeSwitcher";
 
 export const runtime = "nodejs";
@@ -12,7 +12,7 @@ async function getAuthenticatedShop(req: NextRequest) {
 }
 
 async function getAccessToken(shop: string) {
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   return session?.accessToken ?? null;
 }
 

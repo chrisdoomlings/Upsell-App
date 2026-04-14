@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { archiveBundleOfferDiscount } from "@/lib/shopify/bundleOfferDiscountSync";
 import { deleteBundleOffer } from "@/lib/shopify/bundleOfferStore";
 
@@ -17,7 +17,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const shop = await getShop(req);
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
     const removed = await deleteBundleOffer(shop, params.id);

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { getShopUpsellRulesMetafield } from "@/lib/shopify/shopUpsellRulesMetafield";
 import { listUpsellRules } from "@/lib/shopify/upsellRuleStore";
 import { ensureInstalledPublicShop } from "@/lib/utils/publicShopAccess";
@@ -36,7 +36,7 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop!}`);
+    const session = await sessionStorage.loadSession(`offline_${shop!}`);
     if (!session?.accessToken) return NextResponse.json({ upsells: [] }, { headers: CORS });
 
     let rules = await listUpsellRules(shop!, session.accessToken);

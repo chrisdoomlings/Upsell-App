@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
-import { getShop as getStoredShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop as getStoredShop, updateShopSettings } from "@/lib/shopStore";
 import {
   normalizeGeoCountdownCampaign,
   sortGeoCountdownCampaigns,

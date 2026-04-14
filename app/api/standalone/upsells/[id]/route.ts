@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { deleteUpsellRule, getUpsellRule, listUpsellRules, upsertUpsellRule } from "@/lib/shopify/upsellRuleStore";
 import { setShopUpsellRulesMetafield } from "@/lib/shopify/shopUpsellRulesMetafield";
 
@@ -11,7 +11,7 @@ async function getShopAndToken(req: NextRequest) {
   const cookie = req.cookies.get(COOKIE_NAME)?.value;
   const shop = cookie ? await verifyShop(cookie) : null;
   if (!shop) return { shop: null, accessToken: null, error: NextResponse.json({ error: "Unauthorized" }, { status: 401 }) };
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   if (!session?.accessToken) return { shop, accessToken: null, error: NextResponse.json({ error: "No access token" }, { status: 403 }) };
   return { shop, accessToken: session.accessToken, error: null };
 }

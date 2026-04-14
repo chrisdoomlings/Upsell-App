@@ -1,4 +1,4 @@
-// Migrated to Supabase. Re-exported here so existing imports don't need to change.
+// Legacy compatibility wrapper. Prefer importing from "@/lib/shopStore".
 export {
   saveShop,
   getShop,
@@ -6,5 +6,5 @@ export {
   updateShopSettings,
   deleteShopAllData,
   listShops,
-} from "@/lib/supabase/shopStore";
-export type { ShopData } from "@/lib/supabase/shopStore";
+} from "@/lib/shopStore";
+export type { ShopData } from "@/lib/shopStore";

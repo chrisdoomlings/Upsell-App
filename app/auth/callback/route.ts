@@ -1,9 +1,9 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Session } from "@shopify/shopify-api";
-import { saveShop } from "@/lib/firebase/shopStore";
+import { saveShop } from "@/lib/shopStore";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest) {
       ["accessToken", access_token],
       ["scope", SCOPES],
     ]);
-    await firestoreSessionStorage.storeSession(session);
+    await sessionStorage.storeSession(session);
 
     await saveShop(shop, {
       installedAt: new Date().toISOString(),

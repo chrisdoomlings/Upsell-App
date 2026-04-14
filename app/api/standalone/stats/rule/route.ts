@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/sessionStore";
 import { getUpsellRule } from "@/lib/shopify/upsellRuleStore";
 import { getRuleStatsByDay } from "@/lib/supabase/statsStore";
 
@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   const ruleId = req.nextUrl.searchParams.get("id");
   if (!ruleId) return NextResponse.json({ error: "Missing id" }, { status: 400 });
 
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
   const [rule, daily] = await Promise.all([
