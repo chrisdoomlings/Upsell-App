@@ -13,7 +13,7 @@ import {
   Tiles,
 } from "@shopify/post-purchase-ui-extensions";
 
-const APP_URL = "https://upseller-app.vercel.app";
+const APP_URL = "https://upseller-app-git-dev-chrisdoomlings.vercel.app";
 
 extend("Checkout::PostPurchase::ShouldRender", async ({ inputData, storage }) => {
   const response = await fetch(`${APP_URL}/api/post-purchase/offer`, {

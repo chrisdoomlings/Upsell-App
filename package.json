@@ -3,6 +3,7 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "sync:extension-host": "node scripts/sync-extension-host.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
