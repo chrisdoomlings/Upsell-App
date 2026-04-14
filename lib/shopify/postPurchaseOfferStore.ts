@@ -141,12 +141,12 @@ export async function listPostPurchaseOffers(shop: string, accessToken: string):
   const liveVariants = await loadLiveVariants(shop, accessToken, offers);
 
   return offers
-    .map((offer) => {
+    .map((offer): PostPurchaseOffer | null => {
       const lv = liveVariants.get(toGid("ProductVariant", String(offer.offerProduct?.variantId ?? ""))) ?? null;
       const offerProduct = hydrateOfferProduct(offer.offerProduct, lv);
       return offerProduct ? { ...offer, offerProduct } : null;
     })
-    .filter((o): o is PostPurchaseOffer => Boolean(o))
+    .filter((o): o is PostPurchaseOffer => o !== null)
     .sort((a, b) => a.priority - b.priority || a.name.localeCompare(b.name));
 }
 
