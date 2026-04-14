@@ -2,7 +2,7 @@
 id="upsale-bundle-offers-root"
 data-shop="{{ shop.permanent_domain }}"
 data-currency="{{ shop.currency }}"
-data-api-base="{{ settings.api_base | default: 'https://doomling-app-navy.vercel.app' }}"
+data-api-base="https://doomling-app-navy.vercel.app"
 data-code-note="{{ settings.code_note | default: 'Bundle discount applied: [code]' | escape }}"
 ></div>
 
@@ -399,12 +399,6 @@ boot();
 "name": "Bundle offers",
 "target": "body",
 "settings": [
-{
-"type": "text",
-"id": "api_base",
-"label": "App base URL",
-"default": "https://doomling-app-navy.vercel.app"
-},
 {
 "type": "text",
 "id": "code_note",

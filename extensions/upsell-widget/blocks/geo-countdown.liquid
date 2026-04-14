@@ -22,7 +22,7 @@ id="{{ countdown_dom_id }}"
 class="upsale-geo-countdown color-{{ block.settings.color_scheme }}"
 data-upsale-geo-countdown
 data-shop="{{ shop.permanent_domain | escape }}"
-data-api-base="{{ settings.api_base | default: 'https://doomling-app-navy.vercel.app' }}"
+data-api-base="https://doomling-app-navy.vercel.app"
 data-display-mode="{{ block.settings.display_mode | default: 'auto' }}"
 data-campaign-id="{{ block.settings.campaign_id | escape }}"
 data-country="{{ localization.country.iso_code | upcase | escape }}"
@@ -394,13 +394,6 @@ start();
 { "value": "scheme-5", "label": "Scheme 5" }
 ],
 "default": "scheme-1"
-},
-{
-"type": "text",
-"id": "api_base",
-"label": "App base URL",
-"default": "https://doomling-app-navy.vercel.app",
-"info": "Your app domain used to load countdown campaigns, for example https://doomling-app-navy.vercel.app"
 },
 {
 "type": "select",

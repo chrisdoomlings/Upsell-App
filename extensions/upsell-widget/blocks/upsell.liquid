@@ -339,7 +339,7 @@ if (!root) return;
 var shop = root.dataset.shop;
 var productId = root.dataset.productId;
 var currency = root.dataset.currency;
-var apiBase = ({{ settings.api_base | json }} || 'https://doomling-app-navy.vercel.app').replace(/\/$/, '');
+var apiBase = 'https://doomling-app-navy.vercel.app';
 var list = root.querySelector('[data-upsale-list]');
 var trackEl = root.querySelector('[data-upsale-track]');
 var controls = root.querySelector('[data-upsale-controls]');
@@ -582,13 +582,6 @@ track(ruleId, 'view');
 "name": "Upsell Widget",
 "target": "section",
 "settings": [
-{
-"type": "text",
-"id": "api_base",
-"label": "App URL",
-"info": "Your app URL",
-"default": "https://doomling-app-navy.vercel.app"
-},
 {
 "type": "text",
 "id": "eyebrow_text",

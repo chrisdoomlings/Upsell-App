@@ -11,7 +11,7 @@ endif
 id="{{ cursor_dom_id }}"
 data-upsale-custom-cursor
 data-shop="{{ shop.permanent_domain | escape }}"
-data-api-base="{{ block.settings.api_base | default: 'https://doomling-app-navy.vercel.app' }}"
+data-api-base="https://doomling-app-navy.vercel.app"
 data-page-target="{{ current_page_target | escape }}"
 data-show-debug="{{ block.settings.show_debug }}"
 hidden
@@ -354,12 +354,6 @@ setDebug('fetch failed');
 "name": "Custom cursor",
 "target": "body",
 "settings": [
-{
-"type": "text",
-"id": "api_base",
-"label": "App base URL",
-"default": "https://doomling-app-navy.vercel.app"
-},
 {
 "type": "checkbox",
 "id": "show_debug",
