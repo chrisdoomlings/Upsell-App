@@ -1,4 +1,4 @@
-{% comment %} Upsale â€” Cart Recommendations {% endcomment %}
+{% comment %} Upsale - Cart Recommendations {% endcomment %}
 
 {% assign cart_product_ids = '' %}
 {% for item in cart.items %}
@@ -116,7 +116,7 @@ margin: 0 0 0.3rem;
 </div>
 </div>
 <button id="upsale-cart-btn">Add to cart</button>
-<div id="upsale-cart-added">âœ“ Added!</div>
+<div id="upsale-cart-added">Added!</div>
 </div>
 </div>
 
@@ -129,10 +129,11 @@ if (!root) return;
 
 var shop = root.dataset.shop;
 var currency = root.dataset.currency;
-var ids = (root.dataset.productIds || '').split(',').filter(Boolean);
 var apiBase = 'https://upseller-app.vercel.app';
+var refreshTimer = null;
+var activeRequest = 0;
 
-if (!shop || ids.length === 0) return;
+if (!shop) return;
 
 var fmt = function (n) {
 try {
@@ -142,100 +143,279 @@ return currency + ' ' + parseFloat(n).toFixed(2);
 }
 };
 
-// Try each cart product until we find a matching upsell
-var alreadyInCart = new Set(ids);
+var getCartSectionIds = function () {
+var sections = [];
+document.querySelectorAll('cart-items-component[data-section-id], cart-discount[data-section-id]').forEach(function (element) {
+if (!(element instanceof HTMLElement)) return;
+var sectionId = element.dataset.sectionId;
+if (sectionId && sections.indexOf(sectionId) === -1) {
+sections.push(sectionId);
+}
+});
+return sections;
+};
 
-function tryNext(index) {
-if (index >= ids.length) return;
-var pid = ids[index];
+var dispatchCartUpdate = function (payload) {
+document.dispatchEvent(new CustomEvent('cart:update', {
+bubbles: true,
+detail: {
+resource: {},
+sourceId: 'upsale-cart-widget',
+data: payload || {}
+}
+}));
+};
 
-fetch(apiBase + '/api/upsell?shop=' + encodeURIComponent(shop) + '&product_id=' + pid)
-.then(function (r) { return r.json(); })
-.then(function (data) {
-if (!data || !data.upsell) { tryNext(index + 1); return; }
-var u = data.upsell;
-
-var inCart = alreadyInCart.has(String(u.productId));
-
-document.getElementById('upsale-cart-label').textContent = u.message || 'You might also like';
-document.getElementById('upsale-cart-title').textContent = u.title || '';
-document.getElementById('upsale-cart-price').textContent = fmt(u.price);
-
-if (u.discountPercent > 0) {
-var orig = document.getElementById('upsale-cart-original');
-orig.textContent = fmt(u.originalPrice);
-orig.style.display = 'inline';
-var badge = document.getElementById('upsale-cart-badge');
-badge.textContent = u.discountPercent + '% OFF';
-badge.style.display = 'inline';
+var postCart = function (path, payload) {
+var body = Object.assign({}, payload || {});
+var sections = getCartSectionIds();
+if (sections.length) {
+body.sections = sections;
+body.sections_url = window.location.pathname;
 }
 
-if (u.image) {
-var img = document.getElementById('upsale-cart-img');
-img.src = u.image;
-img.alt = u.title;
-img.style.display = 'block';
-document.getElementById('upsale-cart-img-placeholder').style.display = 'none';
-}
+return fetch(path, {
+method: 'POST',
+headers: {
+'Content-Type': 'application/json',
+Accept: 'application/json'
+},
+body: JSON.stringify(body)
+}).then(function (response) {
+return response.json().then(function (data) {
+if (!response.ok || (data && data.status)) throw new Error('cart_request_failed');
+return data;
+});
+});
+};
 
-root.style.display = 'block';
-
-var inCartNote = document.getElementById('upsale-cart-in-cart-note');
-if (inCartNote) inCartNote.style.display = inCart ? 'block' : 'none';
-
-// Tracking
-var track = function (event) {
+var track = function (ruleId, event) {
 fetch(apiBase + '/api/track', {
 method: 'POST',
 headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ shop: shop, ruleId: u.ruleId, event: event })
+body: JSON.stringify({ shop: shop, ruleId: ruleId, event: event })
 }).catch(function () {});
 };
-track('view');
 
-// Wire up Add to Cart
+var resetOfferUi = function () {
+var label = document.getElementById('upsale-cart-label');
+var title = document.getElementById('upsale-cart-title');
+var price = document.getElementById('upsale-cart-price');
+var original = document.getElementById('upsale-cart-original');
+var badge = document.getElementById('upsale-cart-badge');
+var img = document.getElementById('upsale-cart-img');
+var placeholder = document.getElementById('upsale-cart-img-placeholder');
 var btn = document.getElementById('upsale-cart-btn');
-fetch('/products/' + u.handle + '.js')
-.then(function (r) { return r.json(); })
+var added = document.getElementById('upsale-cart-added');
+var inCartNote = document.getElementById('upsale-cart-in-cart-note');
+
+if (label) label.textContent = '';
+if (title) title.textContent = '';
+if (price) price.textContent = '';
+if (original) {
+original.textContent = '';
+original.style.display = 'none';
+}
+if (badge) {
+badge.textContent = '';
+badge.style.display = 'none';
+}
+if (img) {
+img.src = '';
+img.alt = '';
+img.style.display = 'none';
+}
+if (placeholder) placeholder.style.display = 'block';
+if (btn) {
+btn.disabled = false;
+btn.style.display = '';
+btn.textContent = 'Add to cart';
+btn.onclick = null;
+}
+if (added) added.style.display = 'none';
+if (inCartNote) inCartNote.style.display = 'none';
+root.style.display = 'none';
+};
+
+var resolveVariantId = function (handle) {
+if (!handle) return Promise.resolve(null);
+return fetch('/products/' + handle + '.js')
+.then(function (response) { return response.ok ? response.json() : null; })
 .then(function (product) {
-var variantId = product.variants && product.variants[0] && product.variants[0].id;
+return product && product.variants && product.variants[0] && product.variants[0].id
+? product.variants[0].id
+: null;
+})
+.catch(function () { return null; });
+};
+
+var renderOffer = function (offer, cartProductIds) {
+var label = document.getElementById('upsale-cart-label');
+var title = document.getElementById('upsale-cart-title');
+var price = document.getElementById('upsale-cart-price');
+var original = document.getElementById('upsale-cart-original');
+var badge = document.getElementById('upsale-cart-badge');
+var img = document.getElementById('upsale-cart-img');
+var placeholder = document.getElementById('upsale-cart-img-placeholder');
+var btn = document.getElementById('upsale-cart-btn');
+var added = document.getElementById('upsale-cart-added');
+var inCartNote = document.getElementById('upsale-cart-in-cart-note');
+var inCart = cartProductIds.indexOf(String(offer.productId || '')) !== -1;
+
+if (label) label.textContent = offer.message || 'You might also like';
+if (title) title.textContent = offer.title || '';
+if (price) price.textContent = fmt(offer.price);
+
+if (original) {
+if (offer.discountPercent > 0) {
+original.textContent = fmt(offer.originalPrice);
+original.style.display = 'inline';
+} else {
+original.textContent = '';
+original.style.display = 'none';
+}
+}
+
+if (badge) {
+if (offer.discountPercent > 0) {
+badge.textContent = offer.discountPercent + '% OFF';
+badge.style.display = 'inline';
+} else {
+badge.textContent = '';
+badge.style.display = 'none';
+}
+}
+
+if (img && placeholder) {
+if (offer.image) {
+img.src = offer.image;
+img.alt = offer.title || '';
+img.style.display = 'block';
+placeholder.style.display = 'none';
+} else {
+img.src = '';
+img.alt = '';
+img.style.display = 'none';
+placeholder.style.display = 'block';
+}
+}
+
+if (inCartNote) inCartNote.style.display = inCart ? 'block' : 'none';
+if (added) added.style.display = 'none';
+root.style.display = 'block';
+track(offer.ruleId, 'view');
+
+return resolveVariantId(offer.handle).then(function (variantId) {
+if (!btn) return null;
+
+btn.disabled = false;
+btn.style.display = '';
+btn.textContent = variantId ? (inCart ? 'Add again' : 'Add to cart') : 'View product';
+btn.onclick = function () {
 if (!variantId) {
-btn.textContent = 'View product';
-btn.addEventListener('click', function () { window.location.href = '/products/' + u.handle; });
+window.location.href = '/products/' + offer.handle;
 return;
 }
-if (inCart) btn.textContent = 'Add again';
-btn.addEventListener('click', function () {
-track('click');
+
+track(offer.ruleId, 'click');
 btn.disabled = true;
-btn.textContent = 'Addingâ€¦';
-fetch('/cart/add.js', {
-method: 'POST',
-headers: { 'Content-Type': 'application/json' },
-body: JSON.stringify({ id: variantId, quantity: 1 })
+btn.textContent = 'Adding...';
+
+postCart('/cart/add.js', {
+id: variantId,
+quantity: 1,
+properties: {
+_upsale: 'true',
+_upsale_rule_id: String(offer.ruleId)
+}
 })
-.then(function (r) {
-if (!r.ok) throw new Error('failed');
-track('added');
+.then(function (data) {
+track(offer.ruleId, 'added');
 btn.style.display = 'none';
-document.getElementById('upsale-cart-added').style.display = 'block';
+if (added) added.style.display = 'block';
+dispatchCartUpdate({
+source: 'upsale-cart-widget',
+itemCount: 1,
+isIncremental: true,
+variantId: String(variantId),
+sections: (data && data.sections) || {}
+});
 document.dispatchEvent(new CustomEvent('cart:refresh'));
+document.dispatchEvent(new CustomEvent('cart:updated'));
+scheduleRefresh();
 })
 .catch(function () {
 btn.disabled = false;
-btn.textContent = 'Add to cart';
+btn.textContent = inCart ? 'Add again' : 'Add to cart';
 });
+};
+
+return null;
 });
-})
-.catch(function () {
-btn.textContent = 'View product';
-btn.addEventListener('click', function () { window.location.href = '/products/' + u.handle; });
-});
-})
-.catch(function () { tryNext(index + 1); });
+};
+
+var loadOffer = function () {
+var requestId = ++activeRequest;
+
+return fetch('/cart.js', { headers: { Accept: 'application/json' }, cache: 'no-store' })
+.then(function (response) { return response.ok ? response.json() : null; })
+.then(function (cart) {
+if (requestId !== activeRequest || !cart || !Array.isArray(cart.items) || cart.items.length === 0) {
+resetOfferUi();
+return null;
 }
 
-tryNext(0);
+var cartProductIds = cart.items
+.map(function (item) { return String(item.product_id || ''); })
+.filter(Boolean);
+
+var uniqueIds = [];
+cartProductIds.forEach(function (id) {
+if (uniqueIds.indexOf(id) === -1) uniqueIds.push(id);
+});
+
+var tryNext = function (index) {
+if (requestId !== activeRequest || index >= uniqueIds.length) {
+resetOfferUi();
+return null;
+}
+
+return fetch(apiBase + '/api/upsell?shop=' + encodeURIComponent(shop) + '&product_id=' + encodeURIComponent(uniqueIds[index]))
+.then(function (response) { return response.ok ? response.json() : { upsells: [] }; })
+.then(function (data) {
+var upsell = data && Array.isArray(data.upsells) ? data.upsells[0] : null;
+if (!upsell) return tryNext(index + 1);
+return renderOffer(upsell, cartProductIds);
+})
+.catch(function () {
+return tryNext(index + 1);
+});
+};
+
+return tryNext(0);
+})
+.catch(function () {
+resetOfferUi();
+return null;
+});
+};
+
+function scheduleRefresh() {
+if (refreshTimer) window.clearTimeout(refreshTimer);
+refreshTimer = window.setTimeout(function () {
+loadOffer();
+}, 80);
+}
+
+['cart:updated', 'cart:refresh', 'cart:update', 'cart:change', 'cart-items-added', 'CartDrawer:AfterItemAdded', 'shopify:cart:updated', 'on:cart:add'].forEach(function (eventName) {
+document.addEventListener(eventName, scheduleRefresh);
+});
+
+if (document.readyState === 'loading') {
+document.addEventListener('DOMContentLoaded', loadOffer, { once: true });
+} else {
+loadOffer();
+}
 })();
 </script>
 

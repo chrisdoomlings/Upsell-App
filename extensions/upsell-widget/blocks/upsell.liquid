@@ -416,6 +416,26 @@ data: payload
 }));
 };
 
+var syncUpsellCartState = function () {
+return getCartProductIds().then(function (cartProductIds) {
+list.querySelectorAll('[data-upsale-item-product-id]').forEach(function (item) {
+if (!(item instanceof HTMLElement)) return;
+var productId = item.getAttribute('data-upsale-item-product-id') || '';
+var inCart = cartProductIds.indexOf(productId) !== -1;
+var badge = item.querySelector('.upsale-upsell-in-cart-badge');
+var button = item.querySelector('[data-upsale-add]');
+
+if (badge instanceof HTMLElement) {
+badge.style.display = inCart ? 'inline-flex' : 'none';
+}
+
+if (button instanceof HTMLButtonElement && !button.disabled && !button.hidden) {
+button.textContent = inCart ? 'Add again' : 'Add to cart';
+}
+});
+}).catch(function () {});
+};
+
 var getCartProductIds = function () {
 return fetch('/cart.js', { headers: { Accept: 'application/json' } })
 .then(function (response) { return response.ok ? response.json() : null; })
@@ -444,6 +464,7 @@ nextButton.disabled = !active || trackEl.scrollLeft >= maxScroll - 8;
 var buildItem = function (upsell, variantId, ruleId, inCart) {
 var item = document.createElement('article');
 item.className = 'upsale-upsell-item';
+item.setAttribute('data-upsale-item-product-id', String(upsell.productId || ''));
 
 var mediaHtml = upsell.image
 ? '<div class="upsale-upsell-media"><img src="' + escapeHtml(upsell.image) + '" alt="' + escapeHtml(upsell.title) + '"></div>'
@@ -529,6 +550,7 @@ sections: data.sections || {}
 });
 document.dispatchEvent(new CustomEvent('cart:refresh'));
 document.dispatchEvent(new CustomEvent('cart:updated'));
+syncUpsellCartState();
 })
 .catch(function () {
 button.disabled = false;
@@ -587,10 +609,17 @@ root.hidden = false;
 requestAnimationFrame(function () {
 requestAnimationFrame(updateControls);
 });
+syncUpsellCartState();
 track(ruleId, 'view');
 });
 })
 .catch(function () {});
+
+['cart:updated', 'cart:refresh', 'cart:update', 'cart:change', 'cart-items-added', 'CartDrawer:AfterItemAdded', 'shopify:cart:updated', 'on:cart:add'].forEach(function (eventName) {
+document.addEventListener(eventName, function () {
+syncUpsellCartState();
+});
+});
 })();
 </script>
 
