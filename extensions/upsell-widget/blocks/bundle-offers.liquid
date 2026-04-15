@@ -9,37 +9,50 @@ data-code-note="{{ settings.code_note | default: 'Bundle discount applied: [code
 <style>
 .upsale-bundle-code-note {
 display: block;
-margin-top: 0.35rem;
+margin-top: 0.45rem;
 color: rgb(var(--color-sale-price, 196 48 28));
-font-size: 0.75rem;
-font-weight: 700;
-letter-spacing: 0.02em;
+font-family: var(--font-subheading--family, var(--font-body--family, inherit));
+font-weight: var(--font-subheading--weight, 700);
+font-style: var(--font-subheading--style, normal);
+font-size: max(0.82rem, calc(var(--font-size--paragraph, 1rem) * 0.78));
+line-height: calc(var(--font-paragraph--line-height, 1.5) * 0.95);
+letter-spacing: var(--font-subheading--letter-spacing, 0.02em);
 text-transform: uppercase;
 }
 
 .upsale-bundle-items-note {
 display: block;
-margin-top: 0.3rem;
-color: rgba(17, 24, 39, 0.68);
-font-size: 0.74rem;
-line-height: 1.45;
+margin-top: 0.38rem;
+color: rgb(var(--color-foreground, 17 24 39) / 0.72);
+font-family: var(--font-body--family, inherit);
+font-weight: var(--font-body--weight, 400);
+font-style: var(--font-body--style, normal);
+font-size: max(0.88rem, calc(var(--font-size--paragraph, 1rem) * 0.84));
+line-height: var(--font-paragraph--line-height, 1.5);
 }
 
 .upsale-bundle-sale-row {
 display: flex;
 align-items: baseline;
-gap: 0.55rem;
+gap: var(--price-gap-y, 0.4rem) var(--price-gap-x, 0.4rem);
 flex-wrap: wrap;
 }
 
 .upsale-bundle-sale-price {
 color: rgb(var(--color-sale-price, 196 48 28));
-font-weight: 700;
+font-family: var(--font-pcard-price--family, var(--font-body--family, inherit));
+font-weight: var(--font-pcard-price--weight, 700);
+font-style: var(--font-pcard-price--style, normal);
+white-space: nowrap;
 }
 
 .upsale-bundle-compare-price {
-color: rgba(17, 24, 39, 0.62);
+color: rgb(var(--color-foreground, 17 24 39) / 0.6);
+font-family: var(--font-pcard-price--family, var(--font-body--family, inherit));
+font-weight: var(--font-pcard-price--weight, 700);
+font-style: var(--font-pcard-price--style, normal);
 text-decoration: line-through;
+white-space: nowrap;
 }
 </style>
 
