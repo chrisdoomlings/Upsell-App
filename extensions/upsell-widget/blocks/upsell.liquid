@@ -476,9 +476,7 @@ var compareHtml = upsell.discountPercent > 0
 var customBadgeHtml = upsell.badgeText
 ? '<span class="upsale-upsell-custom-badge">' + escapeHtml(upsell.badgeText) + '</span>'
 : '';
-var inCartBadgeHtml = inCart
-? '<span class="upsale-upsell-in-cart-badge">Already in your cart</span>'
-: '';
+var inCartBadgeHtml = '<span class="upsale-upsell-in-cart-badge"' + (inCart ? '' : ' style="display:none"') + '>Already in your cart</span>';
 
 var actionHtml = variantId
 ? '<button type="button" class="upsale-upsell-button" data-upsale-add>' + (inCart ? 'Add again' : 'Add to cart') + '</button>'
@@ -539,8 +537,13 @@ return data;
 })
 .then(function (data) {
 track(ruleId, 'added');
-button.hidden = true;
+button.disabled = false;
+button.hidden = false;
+button.textContent = 'Add again';
 added.style.display = 'inline-flex';
+setTimeout(function () {
+added.style.display = 'none';
+}, 2200);
 dispatchCartUpdate({
 source: 'upsale-upsell-widget',
 itemCount: 1,
@@ -554,7 +557,7 @@ syncUpsellCartState();
 })
 .catch(function () {
 button.disabled = false;
-button.textContent = 'Add to cart';
+button.textContent = inCart ? 'Add again' : 'Add to cart';
 });
 });
 }
