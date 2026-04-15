@@ -155,7 +155,7 @@ fetch(apiBase + '/api/upsell?shop=' + encodeURIComponent(shop) + '&product_id=' 
 if (!data || !data.upsell) { tryNext(index + 1); return; }
 var u = data.upsell;
 
-var inCart = alreadyInCart.has(u.productId);
+var inCart = alreadyInCart.has(String(u.productId));
 
 document.getElementById('upsale-cart-label').textContent = u.message || 'You might also like';
 document.getElementById('upsale-cart-title').textContent = u.title || '';

@@ -26,7 +26,7 @@ async function syncCompiledState(shop: string, accessToken: string) {
   let syncWarning: string | null = null;
   try {
     const syncTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Discount sync timed out. Rule saved — try toggling the rule off/on to retry sync.")), 8_000)
+      setTimeout(() => reject(new Error("Discount sync timed out. Rule saved - try toggling the rule off/on to retry sync.")), 8_000)
     );
     await Promise.race([syncBxgyDiscount(shop, accessToken, enabledRules), syncTimeout]);
   } catch (error) {

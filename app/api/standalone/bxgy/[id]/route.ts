@@ -45,7 +45,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     let warning: string | null = null;
     try {
       const syncTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Discount sync timed out. Rule updated — try toggling the rule to retry sync.")), 8_000)
+        setTimeout(() => reject(new Error("Discount sync timed out. Rule updated - try toggling the rule to retry sync.")), 8_000)
       );
       await Promise.race([syncBxgyDiscount(shop, session.accessToken, enabledRules), syncTimeout]);
     } catch (error) {
@@ -81,7 +81,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     let warning: string | null = null;
     try {
       const syncTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Discount sync timed out. Rule deleted — try saving another rule to retry sync.")), 8_000)
+        setTimeout(() => reject(new Error("Discount sync timed out. Rule deleted - try saving another rule to retry sync.")), 8_000)
       );
       await Promise.race([syncBxgyDiscount(shop, session.accessToken, enabledRules), syncTimeout]);
     } catch (error) {

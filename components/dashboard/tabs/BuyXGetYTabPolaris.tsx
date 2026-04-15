@@ -170,7 +170,7 @@ export default function BuyXGetYTabPolaris() {
         setSuccessMessage(rule.enabled ? "Rule paused." : "Rule resumed.");
       }
     } catch {
-      setError("Network error — please check your connection and try again.");
+      setError("Network error - please check your connection and try again.");
     } finally {
       setTogglingId(null);
     }
@@ -247,7 +247,7 @@ export default function BuyXGetYTabPolaris() {
         setSuccessMessage(wasEditing ? "Rule updated." : "Buy X Get Y rule saved.");
       }
     } catch {
-      setError("Network error — please check your connection and try again.");
+      setError("Network error - please check your connection and try again.");
     } finally {
       setSaving(false);
     }
@@ -346,7 +346,7 @@ export default function BuyXGetYTabPolaris() {
         {subNavBtn("help", "Help")}
       </div>
 
-      {/* Error / success banners — always visible */}
+      {/* Error / success banners - always visible */}
       {error && (
         <Banner tone="critical" onDismiss={() => setError(null)}>
           {error}
@@ -358,7 +358,7 @@ export default function BuyXGetYTabPolaris() {
         </Banner>
       )}
 
-      {/* ── Rules tab ── */}
+      {/* Rules tab */}
       {subTab === "rules" && (
         <BlockStack gap="500">
           {/* Create rule form */}
@@ -563,7 +563,7 @@ export default function BuyXGetYTabPolaris() {
                           <Thumbnail source={rule.giftProduct.image} alt={rule.giftProduct.title ?? ""} size="small" />
                         )}
                         <BlockStack gap="050">
-                          <Text as="p" variant="bodySm" fontWeight="semibold">{rule.giftProduct?.title ?? "—"}</Text>
+                          <Text as="p" variant="bodySm" fontWeight="semibold">{rule.giftProduct?.title ?? "-"}</Text>
                           <Badge tone="success">Free gift</Badge>
                         </BlockStack>
                       </InlineStack>
@@ -596,7 +596,7 @@ export default function BuyXGetYTabPolaris() {
         </BlockStack>
       )}
 
-      {/* ── Statistics tab ── */}
+      {/* Statistics tab */}
       {subTab === "stats" && (
         <BlockStack gap="500">
           {summary && (
@@ -643,7 +643,7 @@ export default function BuyXGetYTabPolaris() {
         </BlockStack>
       )}
 
-      {/* ── Help tab ── */}
+      {/* Help tab */}
       {subTab === "help" && (
         <Card>
           <BlockStack gap="500">
