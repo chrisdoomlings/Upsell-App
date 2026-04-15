@@ -304,6 +304,25 @@ export default function BuyXGetYTabPolaris() {
     cursor: "help",
     padding: 0,
   };
+  const actionIconButton: React.CSSProperties = {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    border: "1px solid #d1d5db",
+    background: "#fff",
+    color: "#374151",
+    display: "inline-flex",
+    alignItems: "center",
+    justifyContent: "center",
+    cursor: "pointer",
+    padding: 0,
+  };
+  const dangerActionIconButton: React.CSSProperties = {
+    ...actionIconButton,
+    border: "1px solid #fecaca",
+    color: "#b91c1c",
+    background: "#fff7f7",
+  };
 
   const subNavBtn = (key: typeof subTab, label: string) => {
     const active = subTab === key;
@@ -326,6 +345,14 @@ export default function BuyXGetYTabPolaris() {
         {label}
       </button>
     );
+  };
+
+  const iconSvgProps = {
+    width: 16,
+    height: 16,
+    viewBox: "0 0 20 20",
+    fill: "none",
+    "aria-hidden": true as const,
   };
 
   return (
@@ -579,13 +606,48 @@ export default function BuyXGetYTabPolaris() {
                     </IndexTable.Cell>
                     <IndexTable.Cell>
                       <InlineStack gap="200">
-                        <Button size="slim" onClick={() => handleEdit(rule)}>Edit</Button>
-                        <Button size="slim" loading={togglingId === rule.id} disabled={togglingId === rule.id} onClick={() => void handleToggleEnabled(rule)}>
-                          {rule.enabled ? "Pause" : "Resume"}
-                        </Button>
-                        <Button tone="critical" variant="secondary" size="slim" onClick={() => handleDelete(rule.id)}>
-                          Delete
-                        </Button>
+                        <Tooltip content="Edit rule">
+                          <button type="button" aria-label="Edit rule" style={actionIconButton} onClick={() => handleEdit(rule)}>
+                            <svg {...iconSvgProps}>
+                              <path d="M4 13.5V16h2.5L14 8.5 11.5 6 4 13.5Z" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M10.5 7l2.5 2.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </Tooltip>
+                        <Tooltip content={rule.enabled ? "Pause rule" : "Resume rule"}>
+                          <button
+                            type="button"
+                            aria-label={rule.enabled ? "Pause rule" : "Resume rule"}
+                            style={actionIconButton}
+                            disabled={togglingId === rule.id}
+                            onClick={() => void handleToggleEnabled(rule)}
+                          >
+                            {togglingId === rule.id ? (
+                              <svg {...iconSvgProps}>
+                                <circle cx="10" cy="10" r="6" stroke="currentColor" strokeWidth="1.6" strokeDasharray="24 12" />
+                              </svg>
+                            ) : rule.enabled ? (
+                              <svg {...iconSvgProps}>
+                                <rect x="5.5" y="4.5" width="3" height="11" rx="1" fill="currentColor" />
+                                <rect x="11.5" y="4.5" width="3" height="11" rx="1" fill="currentColor" />
+                              </svg>
+                            ) : (
+                              <svg {...iconSvgProps}>
+                                <path d="M7 5.5v9l7-4.5-7-4.5Z" fill="currentColor" />
+                              </svg>
+                            )}
+                          </button>
+                        </Tooltip>
+                        <Tooltip content="Delete rule">
+                          <button type="button" aria-label="Delete rule" style={dangerActionIconButton} onClick={() => handleDelete(rule.id)}>
+                            <svg {...iconSvgProps}>
+                              <path d="M5.5 6.5h9" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                              <path d="M8 6.5v-1a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                              <path d="M7 8.5v5.5M10 8.5v5.5M13 8.5v5.5" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" />
+                              <path d="M6.5 6.5l.6 8.1a1 1 0 0 0 1 .9h3.8a1 1 0 0 0 1-.9l.6-8.1" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+                            </svg>
+                          </button>
+                        </Tooltip>
                       </InlineStack>
                     </IndexTable.Cell>
                   </IndexTable.Row>

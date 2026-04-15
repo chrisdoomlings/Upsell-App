@@ -4,6 +4,7 @@ import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { deleteBxgyRule, listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
 import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -57,7 +58,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (error) {
     console.error("[bxgy] PATCH failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to update BXGY rule") },
       { status: 500 },
     );
   }
@@ -93,7 +94,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } catch (error) {
     console.error("[bxgy] DELETE failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to delete BXGY rule") },
       { status: 500 },
     );
   }

@@ -14,40 +14,81 @@ position: fixed;
 right: 1.25rem;
 bottom: 1.25rem;
 z-index: 99998;
-width: min(340px, calc(100vw - 1.5rem));
+width: min(360px, calc(100vw - 1.5rem));
 display: none;
-border-radius: 18px;
+border-radius: 20px;
 overflow: hidden;
-background: linear-gradient(135deg, #14532d 0%, #166534 48%, #22c55e 100%);
-color: #fff;
-box-shadow: 0 18px 48px rgba(21, 128, 61, 0.28);
+background: #ffffff;
+color: #111827;
+border: 1px solid rgba(17, 24, 39, 0.08);
+box-shadow: 0 20px 50px rgba(15, 23, 42, 0.16);
 font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+transition: opacity 0.18s ease, transform 0.22s ease;
+transform: translateY(0);
+opacity: 1;
 }
 #upsale-bxgy-floating * { box-sizing: border-box; }
+#upsale-bxgy-floating[data-hidden='true'] {
+display: none;
+}
 #upsale-bxgy-floating-header {
 display: flex;
 align-items: center;
 justify-content: space-between;
 gap: 0.75rem;
-padding: 0.9rem 1rem 0.65rem;
+padding: 0.95rem 1rem 0.8rem;
+border-bottom: 1px solid rgba(17, 24, 39, 0.08);
+background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
 }
 #upsale-bxgy-floating-title {
-font-size: 0.9rem;
-font-weight: 800;
-letter-spacing: 0.02em;
+font-size: 0.92rem;
+font-weight: 700;
+letter-spacing: 0;
+color: #0f172a;
+}
+#upsale-bxgy-floating-header-meta {
+display: flex;
+align-items: center;
+gap: 0.6rem;
 }
 #upsale-bxgy-floating-badge {
 border-radius: 999px;
-background: rgba(255,255,255,0.16);
-padding: 0.25rem 0.55rem;
-font-size: 0.68rem;
+background: #dcfce7;
+color: #166534;
+padding: 0.28rem 0.58rem;
+font-size: 0.66rem;
 font-weight: 800;
 letter-spacing: 0.08em;
+border: 1px solid #bbf7d0;
+}
+#upsale-bxgy-floating-close {
+appearance: none;
+border: none;
+background: transparent;
+width: 28px;
+height: 28px;
+border-radius: 999px;
+display: inline-flex;
+align-items: center;
+justify-content: center;
+color: #64748b;
+cursor: pointer;
+padding: 0;
+transition: background-color 0.18s ease, color 0.18s ease;
+}
+#upsale-bxgy-floating-close:hover {
+background: rgba(148, 163, 184, 0.14);
+color: #0f172a;
 }
 #upsale-bxgy-floating-body {
-background: rgba(255,255,255,0.1);
-backdrop-filter: blur(10px);
 padding: 0.9rem 1rem 1rem;
+background: #ffffff;
+}
+#upsale-bxgy-floating-copy {
+margin: 0 0 0.8rem;
+font-size: 0.78rem;
+line-height: 1.45;
+color: #64748b;
 }
 .upsale-bxgy-gift-row {
 display: flex;
@@ -61,16 +102,17 @@ margin-top: 0.7rem;
 .upsale-bxgy-gift-placeholder {
 width: 52px;
 height: 52px;
-border-radius: 14px;
+border-radius: 12px;
 flex-shrink: 0;
 object-fit: cover;
-border: 1px solid rgba(255,255,255,0.18);
+border: 1px solid rgba(15, 23, 42, 0.08);
+background: #f8fafc;
 }
 .upsale-bxgy-gift-placeholder {
 display: flex;
 align-items: center;
 justify-content: center;
-background: rgba(255,255,255,0.16);
+background: #f1f5f9;
 font-size: 1.1rem;
 }
 .upsale-bxgy-gift-text {
@@ -79,17 +121,18 @@ flex: 1;
 }
 .upsale-bxgy-gift-name {
 display: block;
-font-size: 0.85rem;
+font-size: 0.84rem;
 font-weight: 700;
 white-space: nowrap;
 overflow: hidden;
 text-overflow: ellipsis;
+color: #0f172a;
 }
 .upsale-bxgy-gift-sub {
 display: block;
 margin-top: 0.15rem;
-font-size: 0.76rem;
-opacity: 0.9;
+font-size: 0.75rem;
+color: #64748b;
 }
 #upsale-bxgy-toast {
 position: fixed;
@@ -150,9 +193,17 @@ bottom: 0.75rem;
 <div id="upsale-bxgy-floating" aria-live="polite" aria-atomic="true">
 <div id="upsale-bxgy-floating-header">
 <span id="upsale-bxgy-floating-title">{{ settings.banner_title | default: 'Your free gift is in the cart' }}</span>
+<div id="upsale-bxgy-floating-header-meta">
 <span id="upsale-bxgy-floating-badge">FREE</span>
+<button id="upsale-bxgy-floating-close" type="button" aria-label="Close free gift banner">
+<svg width="16" height="16" viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M6 6l8 8M14 6l-8 8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+</button>
 </div>
-<div id="upsale-bxgy-floating-body"></div>
+</div>
+<div id="upsale-bxgy-floating-body">
+<p id="upsale-bxgy-floating-copy">Your qualifying gift has been added to the cart automatically.</p>
+<div id="upsale-bxgy-floating-list"></div>
+</div>
 </div>
 
 <div id="upsale-bxgy-toast" role="status" aria-live="polite" aria-atomic="true">
@@ -173,6 +224,7 @@ var GIFT_FLAG = '_bxgy';
 var RULE_FLAG = '_bxgy_rule_id';
 var DISMISSED_FLAG = 'upsale_bxgy_dismissed';
 var DISMISSED_TTL_MS = 30 * 60 * 1000;
+var FLOATING_CLOSE_FLAG = 'upsale_bxgy_floating_closed';
 var nativeFetch = window.fetch.bind(window);
 
 if (!shop || !apiBase) return;
@@ -182,6 +234,7 @@ var rulesPromise = null;
 var syncPending = false;
 var syncRunning = false;
 var latestCart = null;
+var floatingDismissedSignature = '';
 var seenToasts;
 var dismissedGifts;
 try {
@@ -193,6 +246,11 @@ try {
 dismissedGifts = JSON.parse(sessionStorage.getItem(DISMISSED_FLAG) || '{}') || {};
 } catch (e) {
 dismissedGifts = {};
+}
+try {
+floatingDismissedSignature = String(sessionStorage.getItem(FLOATING_CLOSE_FLAG) || '');
+} catch (e) {
+floatingDismissedSignature = '';
 }
 
 function rememberToast(key) {
@@ -209,6 +267,17 @@ return String(ruleId) + ':' + String(variantId);
 function persistDismissedGifts() {
 try {
 sessionStorage.setItem(DISMISSED_FLAG, JSON.stringify(dismissedGifts));
+} catch (e) {}
+}
+
+function setFloatingDismissedSignature(signature) {
+floatingDismissedSignature = String(signature || '');
+try {
+if (floatingDismissedSignature) {
+sessionStorage.setItem(FLOATING_CLOSE_FLAG, floatingDismissedSignature);
+} else {
+sessionStorage.removeItem(FLOATING_CLOSE_FLAG);
+}
 } catch (e) {}
 }
 
@@ -439,15 +508,26 @@ toast.classList.remove('upsale-bxgy-toast-visible');
 function renderFloating(gifts) {
 var floating = document.getElementById('upsale-bxgy-floating');
 var title = document.getElementById('upsale-bxgy-floating-title');
-var body = document.getElementById('upsale-bxgy-floating-body');
-if (!floating || !title || !body) return;
+var list = document.getElementById('upsale-bxgy-floating-list');
+if (!floating || !title || !list) return;
 if (!gifts.length) {
 floating.style.display = 'none';
+floating.setAttribute('data-hidden', 'true');
+setFloatingDismissedSignature('');
 return;
 }
 
+var signature = gifts.map(function (gift) {
+var props = gift && gift.properties ? gift.properties : {};
+return String(props[RULE_FLAG] || '') + ':' + String(gift.variant_id || '') + ':' + String(gift.quantity || 0);
+}).sort().join('|');
+
+if (floatingDismissedSignature && floatingDismissedSignature !== signature) {
+setFloatingDismissedSignature('');
+}
+
 title.textContent = floatingTitle;
-body.innerHTML = gifts.map(function (gift) {
+list.innerHTML = gifts.map(function (gift) {
 var image = gift.featured_image && gift.featured_image.url
 ? '<img class="upsale-bxgy-gift-image" src="' + gift.featured_image.url.split('?')[0] + '?width=120" alt="" loading="lazy" width="52" height="52" />'
 : '<div class="upsale-bxgy-gift-placeholder">&#127873;</div>';
@@ -461,7 +541,16 @@ image +
 '</div>'
 );
 }).join('');
+
+if (floatingDismissedSignature === signature) {
+floating.style.display = 'none';
+floating.setAttribute('data-hidden', 'true');
+return;
+}
+
 floating.style.display = 'block';
+floating.setAttribute('data-hidden', 'false');
+floating.dataset.signature = signature;
 }
 
 function refreshTheme() {
@@ -729,6 +818,17 @@ return xhrOpen.apply(this, arguments);
 setTimeout(function () {
 applyGiftGuards(latestCart);
 }, 120);
+
+var floatingClose = document.getElementById('upsale-bxgy-floating-close');
+if (floatingClose instanceof HTMLButtonElement) {
+floatingClose.addEventListener('click', function () {
+var floating = document.getElementById('upsale-bxgy-floating');
+if (!(floating instanceof HTMLElement)) return;
+setFloatingDismissedSignature(floating.dataset.signature || '');
+floating.style.display = 'none';
+floating.setAttribute('data-hidden', 'true');
+});
+}
 
 runSync();
 })();

@@ -4,6 +4,7 @@ import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
 import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy] GET failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load BXGY rules" },
+      { error: explainDatabaseError(error, "Failed to load BXGY rules") },
       { status: 500 },
     );
   }
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy] POST failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to save BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to save BXGY rule") },
       { status: 500 },
     );
   }

@@ -3,6 +3,7 @@ import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
 import { sessionStorage } from "@/lib/firebase/sessionStore";
 import { listBxgyRules } from "@/lib/shopify/bxgyRuleStore";
 import { getBxgyRuleStats } from "@/lib/firebase/bxgyStatsStore";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy-stats] GET failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load BXGY stats" },
+      { error: explainDatabaseError(error, "Failed to load BXGY stats") },
       { status: 500 },
     );
   }
