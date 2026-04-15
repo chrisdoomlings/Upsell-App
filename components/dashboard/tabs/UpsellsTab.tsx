@@ -137,6 +137,18 @@ export default function UpsellsTab({ storeUrl }: { storeUrl?: string }) {
     const validTriggerIds = skipTriggers
       ? []
       : Array.from(new Set(triggerProductIds.map((id) => id.trim()).filter(Boolean)));
+
+    // Guard: a product cannot be both a trigger and a recommendation
+    if (!skipTriggers && validTriggerIds.length) {
+      const suggestionIds = new Set(validSuggestions.map((s) => s.productId));
+      const conflict = validTriggerIds.find((id) => suggestionIds.has(id));
+      if (conflict) {
+        const conflictTitle = products.find((p) => String(p.id) === conflict)?.title ?? "A product";
+        setError(`"${conflictTitle}" is set as both a trigger and a recommended product. A product cannot recommend itself.`);
+        return;
+      }
+    }
+
     const triggerTitles = validTriggerIds.map((id) => products.find((p) => String(p.id) === id)?.title ?? "");
 
     setSaving(true);

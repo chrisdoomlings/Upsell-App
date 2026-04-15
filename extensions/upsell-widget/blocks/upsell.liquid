@@ -284,6 +284,21 @@ height: 1rem;
 color: rgb(var(--color-button, 17 24 39));
 }
 
+
+#{{ upsell_dom_id }} .upsale-upsell-in-cart-badge {
+display: inline-flex;
+align-items: center;
+min-height: 1.8rem;
+padding: 0.12rem 0.65rem;
+border-radius: 999px;
+background: rgba(0, 128, 96, 0.10);
+color: #008060;
+font-size: 0.7rem;
+font-weight: 700;
+letter-spacing: 0.04em;
+text-transform: uppercase;
+}
+
 @media (max-width: 767px) {
 #{{ upsell_dom_id }} {
 margin-top: 1.6rem;
@@ -426,7 +441,7 @@ nextButton.disabled = !active || trackEl.scrollLeft >= maxScroll - 8;
 }
 };
 
-var buildItem = function (upsell, variantId, ruleId) {
+var buildItem = function (upsell, variantId, ruleId, inCart) {
 var item = document.createElement('article');
 item.className = 'upsale-upsell-item';
 
@@ -440,9 +455,12 @@ var compareHtml = upsell.discountPercent > 0
 var customBadgeHtml = upsell.badgeText
 ? '<span class="upsale-upsell-custom-badge">' + escapeHtml(upsell.badgeText) + '</span>'
 : '';
+var inCartBadgeHtml = inCart
+? '<span class="upsale-upsell-in-cart-badge">Already in your cart</span>'
+: '';
 
 var actionHtml = variantId
-? '<button type="button" class="upsale-upsell-button" data-upsale-add>Add to cart</button>'
+? '<button type="button" class="upsale-upsell-button" data-upsale-add>' + (inCart ? 'Add again' : 'Add to cart') + '</button>'
 : '<a class="upsale-upsell-link" href="/products/' + escapeHtml(upsell.handle || '') + '">View product</a>';
 
 item.innerHTML =
@@ -450,6 +468,7 @@ item.innerHTML =
 mediaHtml +
 '<div class="upsale-upsell-content">' +
 '<div class="upsale-upsell-topline">' +
+inCartBadgeHtml +
 customBadgeHtml +
 '<p class="upsale-upsell-product-title">' + escapeHtml(upsell.title) + '</p>' +
 '<div class="upsale-upsell-price-row">' +
@@ -555,15 +574,13 @@ getCartProductIds()
 var data = results[0];
 var cartProductIds = results[1] || [];
 var upsells = data && Array.isArray(data.upsells) ? data.upsells : [];
-upsells = upsells.filter(function (upsell) {
-return cartProductIds.indexOf(String(upsell.productId || '')) === -1;
-});
 if (!upsells.length) return;
 
 var ruleId = upsells[0].ruleId;
 return Promise.all(upsells.map(function (upsell) {
+var inCart = cartProductIds.indexOf(String(upsell.productId || '')) !== -1;
 return resolveVariantId(upsell).then(function (variantId) {
-list.appendChild(buildItem(upsell, variantId, ruleId));
+list.appendChild(buildItem(upsell, variantId, ruleId, inCart));
 });
 })).then(function () {
 root.hidden = false;

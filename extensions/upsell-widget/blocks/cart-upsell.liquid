@@ -88,6 +88,13 @@ border-radius: 8px;
 font-size: 0.875rem;
 font-weight: 600;
 }
+#upsale-cart-in-cart-note {
+display: none;
+font-size: 0.75rem;
+font-weight: 600;
+color: #008060;
+margin: 0 0 0.3rem;
+}
 </style>
 
 <div id="upsale-cart-card">
@@ -99,6 +106,7 @@ font-weight: 600;
 <img id="upsale-cart-img" src="" alt="" width="80" height="80" />
 <div id="upsale-cart-img-placeholder"></div>
 <div id="upsale-cart-info">
+<p id="upsale-cart-in-cart-note">Already in your cart</p>
 <p id="upsale-cart-label"></p>
 <p id="upsale-cart-title"></p>
 <div id="upsale-cart-prices">
@@ -147,8 +155,7 @@ fetch(apiBase + '/api/upsell?shop=' + encodeURIComponent(shop) + '&product_id=' 
 if (!data || !data.upsell) { tryNext(index + 1); return; }
 var u = data.upsell;
 
-// Skip if already in cart
-if (alreadyInCart.has(u.productId)) { tryNext(index + 1); return; }
+var inCart = alreadyInCart.has(u.productId);
 
 document.getElementById('upsale-cart-label').textContent = u.message || 'You might also like';
 document.getElementById('upsale-cart-title').textContent = u.title || '';
@@ -173,6 +180,9 @@ document.getElementById('upsale-cart-img-placeholder').style.display = 'none';
 
 root.style.display = 'block';
 
+var inCartNote = document.getElementById('upsale-cart-in-cart-note');
+if (inCartNote) inCartNote.style.display = inCart ? 'block' : 'none';
+
 // Tracking
 var track = function (event) {
 fetch(apiBase + '/api/track', {
@@ -194,6 +204,7 @@ btn.textContent = 'View product';
 btn.addEventListener('click', function () { window.location.href = '/products/' + u.handle; });
 return;
 }
+if (inCart) btn.textContent = 'Add again';
 btn.addEventListener('click', function () {
 track('click');
 btn.disabled = true;
