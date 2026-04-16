@@ -351,24 +351,106 @@ export default function BundleOffersTab() {
 
   return (
     <>
+      {error && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          style={{
+            position: "fixed",
+            right: "1.25rem",
+            bottom: "1.25rem",
+            width: "min(420px, calc(100vw - 2rem))",
+            background: "#fff4f4",
+            border: "1px solid #fca5a5",
+            borderLeft: "4px solid #dc2626",
+            borderRadius: "12px",
+            boxShadow: "0 18px 40px rgba(15, 23, 42, 0.16)",
+            padding: "0.9rem 1rem",
+            color: "#991b1b",
+            fontSize: "0.9rem",
+            zIndex: 60,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "start", gap: "0.75rem" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", color: "#b91c1c" }}>
+                Action needed
+              </p>
+              <p style={{ margin: "0.3rem 0 0", lineHeight: 1.5 }}>{error}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setError(null)}
+              aria-label="Dismiss error"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#b91c1c",
+                fontSize: "1.1rem",
+                lineHeight: 1,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
+      {successMessage && (
+        <div
+          role="status"
+          aria-live="polite"
+          style={{
+            position: "fixed",
+            right: "1.25rem",
+            bottom: error ? "7rem" : "1.25rem",
+            width: "min(420px, calc(100vw - 2rem))",
+            background: "#f0fdf4",
+            border: "1px solid #86efac",
+            borderLeft: "4px solid #16a34a",
+            borderRadius: "12px",
+            boxShadow: "0 18px 40px rgba(15, 23, 42, 0.12)",
+            padding: "0.9rem 1rem",
+            color: "#166534",
+            fontSize: "0.9rem",
+            zIndex: 59,
+          }}
+        >
+          <div style={{ display: "flex", alignItems: "start", gap: "0.75rem" }}>
+            <div style={{ flex: 1 }}>
+              <p style={{ margin: 0, fontSize: "0.76rem", fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.04em", color: "#15803d" }}>
+                Saved
+              </p>
+              <p style={{ margin: "0.3rem 0 0", lineHeight: 1.5 }}>{successMessage}</p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSuccessMessage(null)}
+              aria-label="Dismiss message"
+              style={{
+                border: "none",
+                background: "transparent",
+                color: "#15803d",
+                fontSize: "1.1rem",
+                lineHeight: 1,
+                cursor: "pointer",
+                padding: 0,
+              }}
+            >
+              ×
+            </button>
+          </div>
+        </div>
+      )}
+
       <div style={{ marginBottom: "1rem" }}>
         <h1 style={{ margin: 0, fontSize: "1.4rem", fontWeight: 700, color: "#1a1a1a" }}>Discount Offers</h1>
         <p style={{ margin: "0.2rem 0 0", color: "#6d7175", fontSize: "0.84rem", maxWidth: 900 }}>
           Manage non-stackable native discount codes for both standalone discounted products and bundle products, while still showing the sale price across the storefront.
         </p>
       </div>
-
-      {error && (
-        <div style={{ background: "#fff4f4", border: "1px solid #ffd2d2", borderRadius: "8px", padding: "0.75rem 1rem", color: "#c0392b", fontSize: "0.875rem", marginBottom: "1rem" }}>
-          {error}
-        </div>
-      )}
-
-      {successMessage && (
-        <div style={{ background: "#f0fdf4", border: "1px solid #bbf7d0", borderRadius: "8px", padding: "0.75rem 1rem", color: "#166534", fontSize: "0.875rem", marginBottom: "1rem" }}>
-          {successMessage}
-        </div>
-      )}
 
       <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
         {[
