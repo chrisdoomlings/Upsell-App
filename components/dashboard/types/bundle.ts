@@ -11,6 +11,7 @@ export interface BundleOffer {
   id: string;
   name: string;
   offerType: "bundle" | "product";
+  productSource: "existing" | "generated";
   productId: string;
   productTitle: string;
   storefrontHandle?: string;

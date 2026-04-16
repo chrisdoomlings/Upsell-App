@@ -11,7 +11,6 @@ const VALID_TABS = [
   "bundles",
   "customcursor",
   "themeswitcher",
-  "history",
   "postpurchase",
   "stats",
 ] as const;

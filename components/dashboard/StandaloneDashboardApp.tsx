@@ -31,9 +31,6 @@ const CustomCursorTab = dynamic(() => import("./tabs/CustomCursorTab"), {
 const LaunchpadTab = dynamic(() => import("./tabs/LaunchpadTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading theme scheduler...</div>,
 });
-const VersionHistoryTab = dynamic(() => import("./tabs/VersionHistoryTab"), {
-  loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading version history...</div>,
-});
 const PostPurchaseTab = dynamic(() => import("./tabs/PostPurchaseTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading post-purchase...</div>,
 });
@@ -51,7 +48,6 @@ const VALID_TABS = [
   "geocountdown",
   "customcursor",
   "themeswitcher",
-  "history",
   "postpurchase",
   "stats",
 ] as const;
@@ -90,7 +86,6 @@ export default function StandaloneDashboardApp({ activeTab }: { activeTab: Tab }
       {tab === "geocountdown" && <GeoCountdownTab />}
       {tab === "customcursor" && <CustomCursorTab />}
       {tab === "themeswitcher" && <LaunchpadTab />}
-      {tab === "history" && <VersionHistoryTab />}
       {tab === "postpurchase" && <PostPurchaseTab />}
       {tab === "stats" && <StatsTab />}
     </DashboardShell>

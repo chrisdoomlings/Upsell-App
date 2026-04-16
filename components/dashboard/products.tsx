@@ -176,6 +176,7 @@ export function PolarisProductAutocomplete({
   label,
   placeholder,
   helpText,
+  disabled,
 }: {
   products: Product[];
   value: string;
@@ -183,6 +184,7 @@ export function PolarisProductAutocomplete({
   label: string;
   placeholder: string;
   helpText?: string;
+  disabled?: boolean;
 }) {
   const [query, setQuery] = useState("");
 
@@ -209,6 +211,7 @@ export function PolarisProductAutocomplete({
       value={query}
       placeholder={placeholder}
       autoComplete="off"
+      disabled={disabled}
       onChange={(nextValue) => {
         setQuery(nextValue);
         if (!nextValue.trim()) {
@@ -226,7 +229,7 @@ export function PolarisProductAutocomplete({
   return (
     <BlockStack gap="200">
       <Autocomplete
-        options={options}
+        options={disabled ? [] : options}
         selected={value ? [value] : []}
         textField={textField}
         onSelect={(selected) => {

@@ -20,17 +20,24 @@ import type { BundleOffer, BundleOfferItem } from "../types/bundle";
 
 const EMPTY_ITEM_PICKER = "";
 
+type CreatedBundleProduct = {
+  id: string | number;
+  title: string;
+};
+
 export default function BundleOffersTab() {
   const [offers, setOffers] = useState<BundleOffer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [creatingProduct, setCreatingProduct] = useState(false);
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState("Expansions Bundle");
   const [offerType, setOfferType] = useState<"bundle" | "product">("bundle");
+  const [productSource, setProductSource] = useState<"existing" | "generated">("existing");
   const [storefrontTitle, setStorefrontTitle] = useState("Standalone bundle product");
   const [bundleLevel, setBundleLevel] = useState<"product" | "variant">("product");
   const [productId, setProductId] = useState("");
@@ -61,6 +68,7 @@ export default function BundleOffersTab() {
     setEditingId(null);
     setName("Expansions Bundle");
     setOfferType("bundle");
+    setProductSource("existing");
     setStorefrontTitle("Standalone bundle product");
     setBundleLevel("product");
     setProductId("");
@@ -87,6 +95,7 @@ export default function BundleOffersTab() {
 
   const itemCount = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const isBundleOffer = offerType === "bundle";
+  const isGeneratedBundleProduct = isBundleOffer && productSource === "generated";
 
   const availableBundleItems = useMemo(() => {
     const selectedIds = new Set(items.map((item) => String(item.productId)));
@@ -157,6 +166,56 @@ export default function BundleOffersTab() {
     setItems((current) => current.filter((item) => String(item.productId) !== productKey));
   };
 
+  const handleCreateBundleProduct = async () => {
+    if (!isGeneratedBundleProduct) return;
+    if (!storefrontTitle.trim()) {
+      setError("Enter the storefront title before creating the bundle product.");
+      setSuccessMessage(null);
+      return;
+    }
+    if (!compareAtPrice || !discountedPrice) {
+      setError("Enter compare-at and discounted prices before creating the bundle product.");
+      setSuccessMessage(null);
+      return;
+    }
+    if (items.length === 0) {
+      setError("Add at least one product to the bundle before creating the storefront product.");
+      setSuccessMessage(null);
+      return;
+    }
+
+    setCreatingProduct(true);
+    setError(null);
+    setSuccessMessage(null);
+
+    try {
+      const response = await fetch("/api/standalone/bundles/product", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: storefrontTitle,
+          offerName: name,
+          compareAtPrice,
+          discountedPrice,
+          items,
+        }),
+      });
+      const data = await safeJson<{ product?: CreatedBundleProduct; error?: string }>(response);
+      if (!response.ok || !data?.product) {
+        throw new Error(data?.error ?? `HTTP ${response.status}`);
+      }
+
+      await loadData();
+      setProductId(String(data.product.id));
+      setStorefrontTitle(data.product.title);
+      setSuccessMessage("Storefront bundle product created. Save the offer to connect discounts and future sync.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to create storefront bundle product.");
+    } finally {
+      setCreatingProduct(false);
+    }
+  };
+
   const handleSave = async () => {
     if (!name.trim()) {
       setError("Enter an offer name.");
@@ -219,6 +278,7 @@ export default function BundleOffersTab() {
           id: editingId,
           name,
           offerType,
+          productSource,
           productId,
           productTitle: selectedBundleProduct?.title ?? "",
           storefrontHandle: selectedBundleProduct?.handle ?? "",
@@ -271,6 +331,7 @@ export default function BundleOffersTab() {
     setEditingId(offer.id);
     setName(offer.name);
     setOfferType(offer.offerType ?? "bundle");
+    setProductSource(offer.productSource ?? "existing");
     setStorefrontTitle(offer.storefrontTitle || offer.productTitle);
     setBundleLevel(offer.bundleLevel || "product");
     setProductId(offer.productId);
@@ -341,13 +402,38 @@ export default function BundleOffersTab() {
                 onChange={(value) => setOfferType(value === "product" ? "product" : "bundle")}
                 helpText="Choose bundle product when you want to track included items. Choose standalone product when you only need a product-specific native discount code."
               />
+              {isBundleOffer ? (
+                <Select
+                  label="Storefront product source"
+                  options={[
+                    { label: "Choose existing product", value: "existing" },
+                    { label: "Let the app create it", value: "generated" },
+                  ]}
+                  value={productSource}
+                  onChange={(value) => {
+                    const nextValue = value === "generated" ? "generated" : "existing";
+                    setProductSource(nextValue);
+                    if (nextValue === "existing") {
+                      setSuccessMessage(null);
+                    }
+                  }}
+                  helpText="Use app-created when you want this app to create and keep the bundle product aligned."
+                />
+              ) : (
+                <div />
+              )}
               <PolarisProductAutocomplete
                 products={editingId ? products : selectableStandaloneProducts}
                 value={productId}
                 onChange={setProductId}
                 label="Storefront product"
                 placeholder="Search storefront product"
-                helpText="Choose the product that should show the sale price and receive the native discount code in cart."
+                helpText={
+                  isGeneratedBundleProduct
+                    ? "The app-created storefront product will appear here after you create it."
+                    : "Choose the product that should show the sale price and receive the native discount code in cart."
+                }
+                disabled={isGeneratedBundleProduct}
               />
               <div style={{ display: "flex", alignItems: "end" }}>
                 <Checkbox label="Offer is active" checked={enabled} onChange={setEnabled} />
@@ -488,6 +574,36 @@ export default function BundleOffersTab() {
         </Card>
         )}
 
+        {isGeneratedBundleProduct && (
+          <Card>
+            <BlockStack gap="300">
+              <Text as="h2" variant="headingMd">App-created storefront product</Text>
+              <Text as="p" tone="subdued">
+                Create the bundle product here, then save the offer. After that, this app will keep the generated product title, status, and pricing aligned when you edit the offer.
+              </Text>
+              <InlineStack align="space-between" blockAlign="center" wrap gap="300">
+                <BlockStack gap="050">
+                  <Text as="p" variant="bodyMd" fontWeight="semibold">
+                    {productId ? `Connected product #${productId}` : "No bundle product created yet"}
+                  </Text>
+                  <Text as="p" variant="bodySm" tone="subdued">
+                    {productId
+                      ? "This bundle uses an app-generated storefront product."
+                      : "The create action uses the current title, price, and bundle contents."}
+                  </Text>
+                </BlockStack>
+                <Button
+                  onClick={() => void handleCreateBundleProduct()}
+                  loading={creatingProduct}
+                  disabled={creatingProduct || Boolean(productId)}
+                >
+                  {productId ? "Product created" : "Create storefront product"}
+                </Button>
+              </InlineStack>
+            </BlockStack>
+          </Card>
+        )}
+
         <InlineStack align="space-between" blockAlign="center">
           <Text as="p" tone="subdued">
             Enable the `Bundle offers` app embed in your theme so homepage, collection, and product pages show the sale price preview and apply the matching code in cart.
@@ -533,6 +649,7 @@ export default function BundleOffersTab() {
                         : offer.bundleLevel === "variant"
                           ? "Bundle at variant level"
                           : "Bundle at product level"}
+                      {offer.offerType === "bundle" ? ` · ${offer.productSource === "generated" ? "App-created product" : "Existing product"}` : ""}
                     </div>
                   </td>
                   <td style={{ padding: "0.85rem 0.9rem", fontSize: "0.82rem", color: "#374151" }}>
