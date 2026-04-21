@@ -16,9 +16,6 @@ function LoginForm() {
   useEffect(() => {
     if (error) return;
     if (embedded === "1" && shopParam) {
-      const authUrl = new URL("/auth", window.location.origin);
-      params.forEach((value, key) => authUrl.searchParams.set(key, value));
-      window.location.href = authUrl.toString();
       return;
     }
 
@@ -50,7 +47,6 @@ function LoginForm() {
   if (embedded === "1" && shopParam) {
     return (
       <EmbeddedStandaloneLink
-        appBaseUrl={process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || undefined}
         message={
           discountIntent
             ? `Finish setting up your Buy X Get Y discount for ${shopParam} using the button below.`
