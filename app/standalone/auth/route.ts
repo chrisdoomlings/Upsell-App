@@ -15,7 +15,7 @@ export async function GET(req: NextRequest) {
   }
 
   const state = crypto.randomBytes(16).toString("hex");
-  const redirectUri = `${process.env.HOST}/standalone/callback`;
+  const redirectUri = new URL("/standalone/callback", req.nextUrl.origin).toString();
   const authUrl =
     `https://${shop}/admin/oauth/authorize` +
     `?client_id=${process.env.SHOPIFY_API_KEY}` +

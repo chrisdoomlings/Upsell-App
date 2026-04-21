@@ -78,7 +78,9 @@ export async function GET(req: NextRequest) {
     );
 
     const host = req.nextUrl.searchParams.get("host") ?? "";
-    const redirectUrl = `${process.env.HOST}/app/dashboard?shop=${shop}&host=${host}`;
+    const redirectUrl = new URL("/app/dashboard", req.nextUrl.origin);
+    redirectUrl.searchParams.set("shop", shop);
+    if (host) redirectUrl.searchParams.set("host", host);
 
     const res = NextResponse.redirect(redirectUrl);
     res.cookies.delete("shopify_oauth_state");
@@ -88,7 +90,7 @@ export async function GET(req: NextRequest) {
     const shop = req.nextUrl.searchParams.get("shop") ?? "";
     const host = req.nextUrl.searchParams.get("host") ?? "";
     const embedded = req.nextUrl.searchParams.get("embedded") ?? "";
-    const retryUrl = new URL(`${process.env.HOST}/auth`);
+    const retryUrl = new URL("/auth", req.nextUrl.origin);
     retryUrl.searchParams.set("shop", shop);
     if (host) retryUrl.searchParams.set("host", host);
     if (embedded) retryUrl.searchParams.set("embedded", embedded);

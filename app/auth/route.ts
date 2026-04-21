@@ -64,15 +64,15 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "Invalid shop domain" }, { status: 400 });
   }
 
-  if (!process.env.SHOPIFY_API_KEY || !process.env.SHOPIFY_API_SECRET || !process.env.HOST) {
+  if (!process.env.SHOPIFY_API_KEY || !process.env.SHOPIFY_API_SECRET) {
     return NextResponse.json(
-      { error: "Missing Shopify app configuration. Check SHOPIFY_API_KEY, SHOPIFY_API_SECRET, and HOST." },
+      { error: "Missing Shopify app configuration. Check SHOPIFY_API_KEY and SHOPIFY_API_SECRET." },
       { status: 500 },
     );
   }
 
   const state = crypto.randomBytes(16).toString("hex");
-  const redirectUri = `${process.env.HOST}/auth/callback`;
+  const redirectUri = new URL("/auth/callback", req.nextUrl.origin).toString();
   const authUrl =
     `https://${shop}/admin/oauth/authorize` +
     `?client_id=${process.env.SHOPIFY_API_KEY}` +
