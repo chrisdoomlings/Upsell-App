@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listUpsellRules, upsertUpsellRule } from "@/lib/shopify/upsellRuleStore";
 import { setShopUpsellRulesMetafield } from "@/lib/shopify/shopUpsellRulesMetafield";
 
@@ -13,7 +13,7 @@ async function getShop(req: NextRequest) {
 }
 
 async function getAccessToken(shop: string) {
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   return session?.accessToken ?? null;
 }
 
@@ -22,8 +22,14 @@ export async function GET(req: NextRequest) {
   if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   const accessToken = await getAccessToken(shop);
   if (!accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
-  const rules = await listUpsellRules(shop, accessToken, { includeDisabled: true });
-  return NextResponse.json({ rules });
+  try {
+    const rules = await listUpsellRules(shop, accessToken, { includeDisabled: true });
+    return NextResponse.json({ rules });
+  } catch (err) {
+    console.error("[GET /api/standalone/upsells]", err);
+    const msg = err instanceof Error ? err.message : "Failed to load upsell rules";
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }
 
 export async function POST(req: NextRequest) {

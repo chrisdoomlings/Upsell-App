@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
-import { saveShop } from "@/lib/firebase/shopStore";
-import { signShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { saveShop } from "@/lib/supabase/shopStore";
+import { signShop, COOKIE_NAME, STANDALONE_SESSION_MAX_AGE_SECONDS } from "@/lib/utils/standaloneSession";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { Session } from "@shopify/shopify-api";
+import { safeEqualHex } from "@/lib/utils/timingSafeEqual";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
       .createHmac("sha256", process.env.SHOPIFY_API_SECRET!)
       .update(message)
       .digest("hex");
-    if (digest !== hmac) {
+    if (!safeEqualHex(digest, hmac)) {
       return oauthError("Invalid OAuth signature");
     }
 
@@ -72,7 +73,7 @@ export async function GET(req: NextRequest) {
       ["accessToken", access_token],
       ["scope", "write_orders,write_products,read_products,read_themes,write_themes,read_customers,read_analytics,write_discounts,read_discounts,read_cart_transforms,write_cart_transforms"],
     ]);
-    await firestoreSessionStorage.storeSession(session);
+    await sessionStorage.storeSession(session);
 
     // Save shop metadata
     await saveShop(shop, { installedAt: new Date().toISOString(), uninstalledAt: null });
@@ -83,7 +84,7 @@ export async function GET(req: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24 * 7,
+      maxAge: STANDALONE_SESSION_MAX_AGE_SECONDS,
       path: "/",
     });
     res.cookies.delete("shopify_oauth_state");

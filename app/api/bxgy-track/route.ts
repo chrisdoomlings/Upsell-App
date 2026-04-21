@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackBxgyEvent, type BxgyEventType } from "@/lib/firebase/bxgyStatsStore";
+import { trackBxgyEvent, type BxgyEventType } from "@/lib/supabase/bxgyStatsStore";
 import { ensureInstalledPublicShop } from "@/lib/utils/publicShopAccess";
 
 export const runtime = "nodejs";

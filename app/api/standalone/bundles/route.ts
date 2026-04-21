@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listBundleOffers, saveBundleOffer, upsertBundleOffer } from "@/lib/shopify/bundleOfferStore";
 import { syncBundleOfferDiscount } from "@/lib/shopify/bundleOfferDiscountSync";
+import { syncManagedBundleProduct } from "@/lib/shopify/bundleProductSync";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ async function getShop(req: NextRequest) {
 }
 
 async function getAccessToken(shop: string) {
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   return session?.accessToken ?? null;
 }
 
@@ -45,6 +46,7 @@ export async function POST(req: NextRequest) {
       id: body.id,
       name: body.name,
       offerType: body.offerType,
+      productSource: body.productSource,
       productId: body.productId,
       productTitle: body.productTitle,
       storefrontTitle: body.storefrontTitle,
@@ -59,12 +61,24 @@ export async function POST(req: NextRequest) {
 
     let warning: string | null = null;
     try {
+      let nextSaved = saved;
+      if (saved.offerType === "bundle" && saved.productSource === "generated") {
+        const syncedProduct = await syncManagedBundleProduct(shop, accessToken, saved);
+        if (syncedProduct && (syncedProduct.title !== saved.productTitle || syncedProduct.handle !== saved.storefrontHandle)) {
+          nextSaved = await saveBundleOffer(shop, {
+            ...saved,
+            productTitle: syncedProduct.title,
+            storefrontHandle: syncedProduct.handle,
+          });
+        }
+      }
+
       const syncTimeout = new Promise<never>((_, reject) =>
         setTimeout(() => reject(new Error("Discount sync timed out. Bundle saved — try editing and re-saving to retry.")), 8_000)
       );
-      const discountId = await Promise.race([syncBundleOfferDiscount(shop, accessToken, saved), syncTimeout]);
-      if (discountId && discountId !== saved.discountId) {
-        await saveBundleOffer(shop, { ...saved, discountId });
+      const discountId = await Promise.race([syncBundleOfferDiscount(shop, accessToken, nextSaved), syncTimeout]);
+      if (discountId && discountId !== nextSaved.discountId) {
+        await saveBundleOffer(shop, { ...nextSaved, discountId });
       }
     } catch (error) {
       console.error("[bundles] POST discount sync failed", error);

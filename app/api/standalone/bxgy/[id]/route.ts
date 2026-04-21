@@ -1,24 +1,26 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { deleteBxgyRule, listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
 import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookie = req.cookies.get(COOKIE_NAME)?.value;
     const shop = cookie ? await verifyShop(cookie) : null;
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
     const allRules = await listBxgyRules(shop, session.accessToken);
-    const existing = allRules.find((rule) => rule.id === params.id);
+    const existing = allRules.find((rule) => rule.id === id);
     if (!existing) return NextResponse.json({ error: "Rule not found" }, { status: 404 });
 
     const body = await req.json();
@@ -45,7 +47,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     let warning: string | null = null;
     try {
       const syncTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Discount sync timed out. Rule updated — try toggling the rule to retry sync.")), 8_000)
+        setTimeout(() => reject(new Error("Discount sync timed out. Rule updated - try toggling the rule to retry sync.")), 8_000)
       );
       await Promise.race([syncBxgyDiscount(shop, session.accessToken, enabledRules), syncTimeout]);
     } catch (error) {
@@ -57,22 +59,23 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   } catch (error) {
     console.error("[bxgy] PATCH failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to update BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to update BXGY rule") },
       { status: 500 },
     );
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookie = req.cookies.get(COOKIE_NAME)?.value;
     const shop = cookie ? await verifyShop(cookie) : null;
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
-    await deleteBxgyRule(shop, session.accessToken, params.id);
+    await deleteBxgyRule(shop, session.accessToken, id);
 
     const rules = await listBxgyRules(shop, session.accessToken);
     const enabledRules = rules.filter((rule) => rule.enabled);
@@ -81,7 +84,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     let warning: string | null = null;
     try {
       const syncTimeout = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Discount sync timed out. Rule deleted — try saving another rule to retry sync.")), 8_000)
+        setTimeout(() => reject(new Error("Discount sync timed out. Rule deleted - try saving another rule to retry sync.")), 8_000)
       );
       await Promise.race([syncBxgyDiscount(shop, session.accessToken, enabledRules), syncTimeout]);
     } catch (error) {
@@ -93,7 +96,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
   } catch (error) {
     console.error("[bxgy] DELETE failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to delete BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to delete BXGY rule") },
       { status: 500 },
     );
   }

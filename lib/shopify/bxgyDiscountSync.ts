@@ -1,6 +1,6 @@
 import { shopifyAdminGraphql } from "@/lib/shopify/adminGraphql";
 import type { BxgyRule } from "@/lib/shopify/bxgyRuleStore";
-import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop, updateShopSettings } from "@/lib/supabase/shopStore";
 
 const TITLE = "Doomlings Buy X Get Y";
 const NS = "upsale";
@@ -28,7 +28,7 @@ function buildConfig(rules: BxgyRule[]) {
   return {
     version: 1,
     bxgyRules: rules
-      .filter((rule) => rule.enabled && rule.giftProduct?.variantId && rule.buyProducts.length > 0)
+      .filter((rule) => rule.enabled && rule.giftProduct?.variantId && (rule.appliesToAnyProduct || rule.buyProducts.length > 0))
       .map((rule) => ({
         ruleId: rule.id,
         appliesToAnyProduct: rule.appliesToAnyProduct === true,

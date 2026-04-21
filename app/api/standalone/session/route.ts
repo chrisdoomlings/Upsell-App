@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopify } from "@/lib/shopify/client";
-import { signShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
+import { signShop, COOKIE_NAME, STANDALONE_SESSION_MAX_AGE_SECONDS } from "@/lib/utils/standaloneSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +33,7 @@ export async function POST(req: NextRequest) {
       httpOnly: true,
       secure: true,
       sameSite: "none", // required for iframe (embedded app) context
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: STANDALONE_SESSION_MAX_AGE_SECONDS,
       path: "/",
     });
 

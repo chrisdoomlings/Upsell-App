@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { trackEvent, type EventType } from "@/lib/firebase/statsStore";
+import { trackEvent, type EventType } from "@/lib/supabase/statsStore";
 import { ensureInstalledPublicShop } from "@/lib/utils/publicShopAccess";
 
 export const runtime = "nodejs";

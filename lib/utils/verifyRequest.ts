@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopify } from "@/lib/shopify/client";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { Session } from "@shopify/shopify-api";
 
 export async function verifyRequest(req: NextRequest): Promise<{
@@ -25,7 +25,7 @@ export async function verifyRequest(req: NextRequest): Promise<{
     const shop = (payload.dest as string).replace("https://", "");
 
     const offlineSessionId = shopify.session.getOfflineId(shop);
-    const session = await firestoreSessionStorage.loadSession(offlineSessionId);
+    const session = await sessionStorage.loadSession(offlineSessionId);
 
     if (!session) {
       return {

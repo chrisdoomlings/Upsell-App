@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
-import { getPostPurchaseOfferStats } from "@/lib/firebase/postPurchaseStatsStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { getPostPurchaseOfferStats } from "@/lib/supabase/postPurchaseStatsStore";
 import { listPostPurchaseOffers } from "@/lib/shopify/postPurchaseOfferStore";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
 
@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
   const shop = cookie ? await verifyShop(cookie) : null;
   if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
   const offers = await listPostPurchaseOffers(shop, session.accessToken);

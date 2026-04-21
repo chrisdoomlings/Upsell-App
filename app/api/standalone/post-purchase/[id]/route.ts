@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { deletePostPurchaseOffer, listPostPurchaseOffers } from "@/lib/shopify/postPurchaseOfferStore";
 import { setShopPostPurchaseOffersMetafield } from "@/lib/shopify/shopPostPurchaseOffersMetafield";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
@@ -20,7 +20,7 @@ export async function DELETE(
     const shop = await getShop(req);
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
     const { id } = await params;

@@ -1,5 +1,5 @@
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
-import { getShop, listShops, updateShopSettings } from "@/lib/firebase/shopStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { getShop, listShops, updateShopSettings } from "@/lib/supabase/shopStore";
 import { normalizeLaunchpadSchedule, sortLaunchpadSchedules, type LaunchpadSchedule } from "@/lib/launchpad";
 import { publishTheme } from "@/lib/shopify/themeSwitcher";
 
@@ -28,7 +28,7 @@ export async function processDueLaunchpadSchedules(options?: { shop?: string }) 
       .sort((a, b) => Date.parse(a.scheduledForUtc) - Date.parse(b.scheduledForUtc));
     if (dueSchedules.length === 0) continue;
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     const accessToken = session?.accessToken;
     const nextSchedules = [...schedules];
 

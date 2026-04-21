@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getShop } from "@/lib/firebase/shopStore";
+import { getShop, saveShop } from "@/lib/supabase/shopStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 
 const SHOP_PATTERN = /^[a-zA-Z0-9][a-zA-Z0-9-]*\.myshopify\.com$/;
 
@@ -18,7 +19,20 @@ export async function ensureInstalledPublicShop(rawShop: string | null | undefin
     };
   }
 
-  const stored = await getShop(shop);
+  let stored = await getShop(shop);
+  if (!stored?.installedAt || stored.uninstalledAt) {
+    // Auto-heal installs where the offline session exists but the shop row
+    // was never persisted (or was left marked uninstalled).
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
+    if (session?.accessToken) {
+      await saveShop(shop, {
+        installedAt: stored?.installedAt ?? new Date().toISOString(),
+        uninstalledAt: null,
+      });
+      stored = await getShop(shop);
+    }
+  }
+
   if (!stored?.installedAt || stored.uninstalledAt) {
     return {
       shop: null,

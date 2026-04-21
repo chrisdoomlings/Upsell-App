@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Session } from "@shopify/shopify-api";
-import { saveShop } from "@/lib/firebase/shopStore";
+import { saveShop } from "@/lib/supabase/shopStore";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { safeEqualHex } from "@/lib/utils/timingSafeEqual";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       .map((key) => `${key}=${params[key]}`)
       .join("&");
     const digest = crypto.createHmac("sha256", process.env.SHOPIFY_API_SECRET!).update(message).digest("hex");
-    if (digest !== hmac) {
+    if (!safeEqualHex(digest, hmac)) {
       return NextResponse.json({ error: "Invalid OAuth signature" }, { status: 400 });
     }
 
@@ -65,7 +66,7 @@ export async function GET(req: NextRequest) {
       ["accessToken", access_token],
       ["scope", SCOPES],
     ]);
-    await firestoreSessionStorage.storeSession(session);
+    await sessionStorage.storeSession(session);
 
     await saveShop(shop, {
       installedAt: new Date().toISOString(),

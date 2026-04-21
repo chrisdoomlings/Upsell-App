@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { getOrderStats, buildDateRange } from "@/lib/firebase/analyticsStore";
+import { getOrderStats, buildDateRange } from "@/lib/supabase/analyticsStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

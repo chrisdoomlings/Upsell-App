@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
 import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -14,7 +15,7 @@ async function getShop(req: NextRequest) {
 }
 
 async function getAccessToken(shop: string) {
-  const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+  const session = await sessionStorage.loadSession(`offline_${shop}`);
   return session?.accessToken ?? null;
 }
 
@@ -26,7 +27,7 @@ async function syncCompiledState(shop: string, accessToken: string) {
   let syncWarning: string | null = null;
   try {
     const syncTimeout = new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error("Discount sync timed out. Rule saved — try toggling the rule off/on to retry sync.")), 8_000)
+      setTimeout(() => reject(new Error("Discount sync timed out. Rule saved - try toggling the rule off/on to retry sync.")), 8_000)
     );
     await Promise.race([syncBxgyDiscount(shop, accessToken, enabledRules), syncTimeout]);
   } catch (error) {
@@ -50,7 +51,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy] GET failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load BXGY rules" },
+      { error: explainDatabaseError(error, "Failed to load BXGY rules") },
       { status: 500 },
     );
   }
@@ -85,7 +86,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy] POST failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to save BXGY rule" },
+      { error: explainDatabaseError(error, "Failed to save BXGY rule") },
       { status: 500 },
     );
   }

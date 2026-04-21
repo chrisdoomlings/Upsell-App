@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { firestoreSessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listBxgyRules } from "@/lib/shopify/bxgyRuleStore";
-import { getBxgyRuleStats } from "@/lib/firebase/bxgyStatsStore";
+import { getBxgyRuleStats } from "@/lib/supabase/bxgyStatsStore";
+import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
     const shop = cookie ? await verifyShop(cookie) : null;
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
 
-    const session = await firestoreSessionStorage.loadSession(`offline_${shop}`);
+    const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
     const rules = await listBxgyRules(shop, session.accessToken);
@@ -45,7 +46,7 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[bxgy-stats] GET failed", error);
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Failed to load BXGY stats" },
+      { error: explainDatabaseError(error, "Failed to load BXGY stats") },
       { status: 500 },
     );
   }

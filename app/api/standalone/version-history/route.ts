@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
-import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop, updateShopSettings } from "@/lib/supabase/shopStore";
 import { getLatestVersionEntry, getVersionHistory, normalizeVersionHistory } from "@/lib/versionHistory";
 
 export const runtime = "nodejs";

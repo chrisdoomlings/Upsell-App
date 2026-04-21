@@ -1,4 +1,4 @@
-import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop, updateShopSettings } from "@/lib/supabase/shopStore";
 
 export type BundleOfferItem = {
   productId: string;
@@ -13,6 +13,7 @@ export type BundleOffer = {
   id: string;
   name: string;
   offerType: "bundle" | "product";
+  productSource: "existing" | "generated";
   productId: string;
   productTitle: string;
   storefrontHandle?: string;
@@ -53,6 +54,10 @@ function normalizeBundleLevel(value: unknown): "product" | "variant" {
 
 function normalizeOfferType(value: unknown): "bundle" | "product" {
   return String(value ?? "").trim().toLowerCase() === "product" ? "product" : "bundle";
+}
+
+function normalizeProductSource(value: unknown): "existing" | "generated" {
+  return String(value ?? "").trim().toLowerCase() === "generated" ? "generated" : "existing";
 }
 
 function normalizeItem(input: Partial<BundleOfferItem>): BundleOfferItem | null {
@@ -96,6 +101,7 @@ function normalizeOffer(input: Partial<BundleOffer>, existing?: BundleOffer | nu
     id: String(input.id || existing?.id || `bundle_${Date.now()}`),
     name: String(input.name || existing?.name || "").trim(),
     offerType: normalizeOfferType(input.offerType ?? existing?.offerType),
+    productSource: normalizeProductSource(input.productSource ?? existing?.productSource),
     productId: String(input.productId || existing?.productId || "").trim(),
     productTitle: String(input.productTitle || existing?.productTitle || "").trim(),
     storefrontHandle: String(input.storefrontHandle || existing?.storefrontHandle || "").trim() || undefined,
