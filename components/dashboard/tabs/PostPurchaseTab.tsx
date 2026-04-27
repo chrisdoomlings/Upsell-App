@@ -17,7 +17,7 @@ import { safeJson, fmt } from "../shared";
 import { type Product, PolarisProductAutocomplete, hasMeaningfulVariants, bxgyOptionLabel } from "../products";
 import type { PostPurchaseProduct, PostPurchaseOffer, PostPurchaseSummary, PostPurchaseOfferStat } from "../types/post-purchase";
 
-export default function PostPurchaseTab() {
+export default function PostPurchaseTab() { 
   const [isMobile, setIsMobile] = useState(false);
   const [offers, setOffers] = useState<PostPurchaseOffer[]>([]);
   const [summary, setSummary] = useState<PostPurchaseSummary | null>(null);
