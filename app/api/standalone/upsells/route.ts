@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listUpsellRules, upsertUpsellRule } from "@/lib/shopify/upsellRuleStore";
 import { setShopUpsellRulesMetafield } from "@/lib/shopify/shopUpsellRulesMetafield";
 

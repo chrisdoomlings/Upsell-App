@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { archiveBundleOfferDiscount } from "@/lib/shopify/bundleOfferDiscountSync";
 import { deleteBundleOffer } from "@/lib/shopify/bundleOfferStore";
 
@@ -12,7 +12,7 @@ async function getShop(req: NextRequest) {
   return cookie ? await verifyShop(cookie) : null;
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
     const shop = await getShop(req);
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -20,7 +20,8 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
-    const removed = await deleteBundleOffer(shop, params.id);
+    const { id } = await params;
+    const removed = await deleteBundleOffer(shop, id);
     if (removed) {
       try {
         await archiveBundleOfferDiscount(shop, session.accessToken, removed);

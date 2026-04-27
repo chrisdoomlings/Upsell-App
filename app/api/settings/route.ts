@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyRequest } from "@/lib/utils/verifyRequest";
-import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop, updateShopSettings } from "@/lib/supabase/shopStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

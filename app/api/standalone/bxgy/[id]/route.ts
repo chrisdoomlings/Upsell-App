@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { deleteBxgyRule, listBxgyRules, upsertBxgyRule } from "@/lib/shopify/bxgyRuleStore";
 import { setShopBxgyRulesMetafield } from "@/lib/shopify/shopBxgyRulesMetafield";
 import { syncBxgyDiscount } from "@/lib/shopify/bxgyDiscountSync";
@@ -9,8 +9,9 @@ import { explainDatabaseError } from "@/lib/supabase/errors";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookie = req.cookies.get(COOKIE_NAME)?.value;
     const shop = cookie ? await verifyShop(cookie) : null;
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -19,7 +20,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
     const allRules = await listBxgyRules(shop, session.accessToken);
-    const existing = allRules.find((rule) => rule.id === params.id);
+    const existing = allRules.find((rule) => rule.id === id);
     if (!existing) return NextResponse.json({ error: "Rule not found" }, { status: 404 });
 
     const body = await req.json();
@@ -64,8 +65,9 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
 }
 
-export async function DELETE(req: NextRequest, { params }: { params: { id: string } }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookie = req.cookies.get(COOKIE_NAME)?.value;
     const shop = cookie ? await verifyShop(cookie) : null;
     if (!shop) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -73,7 +75,7 @@ export async function DELETE(req: NextRequest, { params }: { params: { id: strin
     const session = await sessionStorage.loadSession(`offline_${shop}`);
     if (!session?.accessToken) return NextResponse.json({ error: "No access token" }, { status: 403 });
 
-    await deleteBxgyRule(shop, session.accessToken, params.id);
+    await deleteBxgyRule(shop, session.accessToken, id);
 
     const rules = await listBxgyRules(shop, session.accessToken);
     const enabledRules = rules.filter((rule) => rule.enabled);

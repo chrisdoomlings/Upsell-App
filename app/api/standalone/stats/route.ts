@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listUpsellRules } from "@/lib/shopify/upsellRuleStore";
-import { getRuleStats } from "@/lib/firebase/statsStore";
+import { getRuleStats } from "@/lib/supabase/statsStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

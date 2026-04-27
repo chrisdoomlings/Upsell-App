@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listBxgyRules } from "@/lib/shopify/bxgyRuleStore";
-import { getBxgyRuleStats } from "@/lib/firebase/bxgyStatsStore";
+import { getBxgyRuleStats } from "@/lib/supabase/bxgyStatsStore";
 import { explainDatabaseError } from "@/lib/supabase/errors";
 
 export const runtime = "nodejs";

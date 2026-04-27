@@ -10,10 +10,15 @@ function LoginForm() {
   const [shop, setShop] = useState(DEFAULT_SHOP);
   const params = useSearchParams();
   const error = params.get("error");
+  const embedded = params.get("embedded");
+  const shopParam = params.get("shop");
 
   useEffect(() => {
     if (error) return;
-    if (params.get("embedded") === "1") return; // Let EmbeddedStandaloneLink handle it
+    if (embedded === "1" && shopParam) {
+      return;
+    }
+
     // Fast path: if a valid session cookie already exists, skip OAuth entirely
     fetch("/api/standalone/me")
       .then((res) => {
@@ -26,9 +31,7 @@ function LoginForm() {
       .catch(() => {
         window.location.href = `/standalone/auth?shop=${DEFAULT_SHOP}`;
       });
-  }, [error, params]);
-  const embedded = params.get("embedded");
-  const shopParam = params.get("shop");
+  }, [embedded, error, params, shopParam]);
   const discountIntent = Array.from(params.entries()).some(([key, value]) =>
     `${key} ${value}`.toLowerCase().includes("discount"),
   );
@@ -44,7 +47,6 @@ function LoginForm() {
   if (embedded === "1" && shopParam) {
     return (
       <EmbeddedStandaloneLink
-        appBaseUrl={process.env.NEXT_PUBLIC_APP_URL || process.env.NEXT_PUBLIC_VERCEL_URL || undefined}
         message={
           discountIntent
             ? `Finish setting up your Buy X Get Y discount for ${shopParam} using the button below.`

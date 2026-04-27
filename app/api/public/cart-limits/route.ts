@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { getShopCartQuantityRulesMetafield } from "@/lib/shopify/shopCartQuantityRulesMetafield";
 import { ensureInstalledPublicShop } from "@/lib/utils/publicShopAccess";
 

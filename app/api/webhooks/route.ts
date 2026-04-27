@@ -1,9 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getShopify } from "@/lib/shopify/client";
-import { incrementDailyOrder, decrementDailyOrder } from "@/lib/firebase/analyticsStore";
-import { trackRevenueAttribution } from "@/lib/firebase/statsStore";
-import { markUninstalled, deleteShopAllData } from "@/lib/firebase/shopStore";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { incrementDailyOrder, decrementDailyOrder } from "@/lib/supabase/analyticsStore";
+import { trackRevenueAttribution } from "@/lib/supabase/statsStore";
+import { markUninstalled, deleteShopAllData } from "@/lib/supabase/shopStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";

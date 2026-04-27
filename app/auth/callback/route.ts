@@ -1,9 +1,10 @@
 import crypto from "crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { Session } from "@shopify/shopify-api";
-import { saveShop } from "@/lib/firebase/shopStore";
+import { saveShop } from "@/lib/supabase/shopStore";
 import { registerWebhooks } from "@/lib/shopify/webhooks";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { safeEqualHex } from "@/lib/utils/timingSafeEqual";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,7 @@ export async function GET(req: NextRequest) {
       .map((key) => `${key}=${params[key]}`)
       .join("&");
     const digest = crypto.createHmac("sha256", process.env.SHOPIFY_API_SECRET!).update(message).digest("hex");
-    if (digest !== hmac) {
+    if (!safeEqualHex(digest, hmac)) {
       return NextResponse.json({ error: "Invalid OAuth signature" }, { status: 400 });
     }
 
@@ -77,7 +78,9 @@ export async function GET(req: NextRequest) {
     );
 
     const host = req.nextUrl.searchParams.get("host") ?? "";
-    const redirectUrl = `${process.env.HOST}/app/dashboard?shop=${shop}&host=${host}`;
+    const redirectUrl = new URL("/app/dashboard", req.nextUrl.origin);
+    redirectUrl.searchParams.set("shop", shop);
+    if (host) redirectUrl.searchParams.set("host", host);
 
     const res = NextResponse.redirect(redirectUrl);
     res.cookies.delete("shopify_oauth_state");
@@ -87,7 +90,7 @@ export async function GET(req: NextRequest) {
     const shop = req.nextUrl.searchParams.get("shop") ?? "";
     const host = req.nextUrl.searchParams.get("host") ?? "";
     const embedded = req.nextUrl.searchParams.get("embedded") ?? "";
-    const retryUrl = new URL(`${process.env.HOST}/auth`);
+    const retryUrl = new URL("/auth", req.nextUrl.origin);
     retryUrl.searchParams.set("shop", shop);
     if (host) retryUrl.searchParams.set("host", host);
     if (embedded) retryUrl.searchParams.set("embedded", embedded);

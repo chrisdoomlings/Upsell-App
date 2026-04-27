@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 import { listBundleOffers, saveBundleOffer, upsertBundleOffer } from "@/lib/shopify/bundleOfferStore";
 import { syncBundleOfferDiscount } from "@/lib/shopify/bundleOfferDiscountSync";
 import { syncManagedBundleProduct } from "@/lib/shopify/bundleProductSync";

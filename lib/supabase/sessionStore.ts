@@ -96,3 +96,5 @@ export const supabaseSessionStorage = {
     }
   },
 };
+
+export const sessionStorage = supabaseSessionStorage;

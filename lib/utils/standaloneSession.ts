@@ -3,6 +3,7 @@ if (!process.env.SESSION_SECRET) {
 }
 const SECRET: string = process.env.SESSION_SECRET;
 export const COOKIE_NAME = "upsale_shop";
+export const STANDALONE_SESSION_MAX_AGE_SECONDS = 60 * 60 * 24;
 
 async function getKey(): Promise<CryptoKey> {
   return crypto.subtle.importKey(
@@ -22,16 +23,36 @@ async function hmac(data: string): Promise<string> {
     .join("");
 }
 
+function hexToBytes(hex: string) {
+  if (!/^[a-f0-9]+$/i.test(hex) || hex.length % 2 !== 0) return null;
+  const bytes = new Uint8Array(hex.length / 2);
+  for (let i = 0; i < bytes.length; i += 1) {
+    bytes[i] = Number.parseInt(hex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+
+async function verifyHmac(data: string, signatureHex: string): Promise<boolean> {
+  const signature = hexToBytes(signatureHex);
+  if (!signature) return false;
+  const key = await getKey();
+  return crypto.subtle.verify("HMAC", key, signature, new TextEncoder().encode(data));
+}
+
 export async function signShop(shop: string): Promise<string> {
-  const sig = await hmac(shop);
-  return `${shop}|${sig}`;
+  const expiresAt = Math.floor(Date.now() / 1000) + STANDALONE_SESSION_MAX_AGE_SECONDS;
+  const payload = `${shop}|${expiresAt}`;
+  const sig = await hmac(payload);
+  return `${payload}|${sig}`;
 }
 
 export async function verifyShop(value: string): Promise<string | null> {
-  const idx = value.lastIndexOf("|");
-  if (idx === -1) return null;
-  const shop = value.slice(0, idx);
-  const sig = value.slice(idx + 1);
-  const expected = await hmac(shop);
-  return sig === expected ? shop : null;
+  const parts = value.split("|");
+  if (parts.length !== 3) return null;
+  const [shop, expiresAtRaw, sig] = parts;
+  const expiresAt = Number(expiresAtRaw);
+  if (!Number.isFinite(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return null;
+
+  const payload = `${shop}|${expiresAtRaw}`;
+  return (await verifyHmac(payload, sig)) ? shop : null;
 }

@@ -284,21 +284,6 @@ height: 1rem;
 color: rgb(var(--color-button, 17 24 39));
 }
 
-
-#{{ upsell_dom_id }} .upsale-upsell-in-cart-badge {
-display: inline-flex;
-align-items: center;
-min-height: 1.8rem;
-padding: 0.12rem 0.65rem;
-border-radius: 999px;
-background: rgba(0, 128, 96, 0.10);
-color: #008060;
-font-size: 0.7rem;
-font-weight: 700;
-letter-spacing: 0.04em;
-text-transform: uppercase;
-}
-
 @media (max-width: 767px) {
 #{{ upsell_dom_id }} {
 margin-top: 1.6rem;
@@ -354,7 +339,7 @@ if (!root) return;
 var shop = root.dataset.shop;
 var productId = root.dataset.productId;
 var currency = root.dataset.currency;
-var apiBase = 'https://upseller-app.vercel.app';
+var apiBase = ({{ settings.api_base | json }} || 'https://doomling-app-navy.vercel.app').replace(/\/$/, '');
 var list = root.querySelector('[data-upsale-list]');
 var trackEl = root.querySelector('[data-upsale-track]');
 var controls = root.querySelector('[data-upsale-controls]');
@@ -416,26 +401,6 @@ data: payload
 }));
 };
 
-var syncUpsellCartState = function () {
-return getCartProductIds().then(function (cartProductIds) {
-list.querySelectorAll('[data-upsale-item-product-id]').forEach(function (item) {
-if (!(item instanceof HTMLElement)) return;
-var productId = item.getAttribute('data-upsale-item-product-id') || '';
-var inCart = cartProductIds.indexOf(productId) !== -1;
-var badge = item.querySelector('.upsale-upsell-in-cart-badge');
-var button = item.querySelector('[data-upsale-add]');
-
-if (badge instanceof HTMLElement) {
-badge.style.display = inCart ? 'inline-flex' : 'none';
-}
-
-if (button instanceof HTMLButtonElement && !button.disabled && !button.hidden) {
-button.textContent = inCart ? 'Add again' : 'Add to cart';
-}
-});
-}).catch(function () {});
-};
-
 var getCartProductIds = function () {
 return fetch('/cart.js', { headers: { Accept: 'application/json' } })
 .then(function (response) { return response.ok ? response.json() : null; })
@@ -461,10 +426,9 @@ nextButton.disabled = !active || trackEl.scrollLeft >= maxScroll - 8;
 }
 };
 
-var buildItem = function (upsell, variantId, ruleId, inCart) {
+var buildItem = function (upsell, variantId, ruleId) {
 var item = document.createElement('article');
 item.className = 'upsale-upsell-item';
-item.setAttribute('data-upsale-item-product-id', String(upsell.productId || ''));
 
 var mediaHtml = upsell.image
 ? '<div class="upsale-upsell-media"><img src="' + escapeHtml(upsell.image) + '" alt="' + escapeHtml(upsell.title) + '"></div>'
@@ -476,10 +440,9 @@ var compareHtml = upsell.discountPercent > 0
 var customBadgeHtml = upsell.badgeText
 ? '<span class="upsale-upsell-custom-badge">' + escapeHtml(upsell.badgeText) + '</span>'
 : '';
-var inCartBadgeHtml = '<span class="upsale-upsell-in-cart-badge"' + (inCart ? '' : ' style="display:none"') + '>Already in your cart</span>';
 
 var actionHtml = variantId
-? '<button type="button" class="upsale-upsell-button" data-upsale-add>' + (inCart ? 'Add again' : 'Add to cart') + '</button>'
+? '<button type="button" class="upsale-upsell-button" data-upsale-add>Add to cart</button>'
 : '<a class="upsale-upsell-link" href="/products/' + escapeHtml(upsell.handle || '') + '">View product</a>';
 
 item.innerHTML =
@@ -487,7 +450,6 @@ item.innerHTML =
 mediaHtml +
 '<div class="upsale-upsell-content">' +
 '<div class="upsale-upsell-topline">' +
-inCartBadgeHtml +
 customBadgeHtml +
 '<p class="upsale-upsell-product-title">' + escapeHtml(upsell.title) + '</p>' +
 '<div class="upsale-upsell-price-row">' +
@@ -537,13 +499,8 @@ return data;
 })
 .then(function (data) {
 track(ruleId, 'added');
-button.disabled = false;
-button.hidden = false;
-button.textContent = 'Add again';
+button.hidden = true;
 added.style.display = 'inline-flex';
-setTimeout(function () {
-added.style.display = 'none';
-}, 2200);
 dispatchCartUpdate({
 source: 'upsale-upsell-widget',
 itemCount: 1,
@@ -553,11 +510,10 @@ sections: data.sections || {}
 });
 document.dispatchEvent(new CustomEvent('cart:refresh'));
 document.dispatchEvent(new CustomEvent('cart:updated'));
-syncUpsellCartState();
 })
 .catch(function () {
 button.disabled = false;
-button.textContent = inCart ? 'Add again' : 'Add to cart';
+button.textContent = 'Add to cart';
 });
 });
 }
@@ -599,30 +555,25 @@ getCartProductIds()
 var data = results[0];
 var cartProductIds = results[1] || [];
 var upsells = data && Array.isArray(data.upsells) ? data.upsells : [];
+upsells = upsells.filter(function (upsell) {
+return cartProductIds.indexOf(String(upsell.productId || '')) === -1;
+});
 if (!upsells.length) return;
 
 var ruleId = upsells[0].ruleId;
 return Promise.all(upsells.map(function (upsell) {
-var inCart = cartProductIds.indexOf(String(upsell.productId || '')) !== -1;
 return resolveVariantId(upsell).then(function (variantId) {
-list.appendChild(buildItem(upsell, variantId, ruleId, inCart));
+list.appendChild(buildItem(upsell, variantId, ruleId));
 });
 })).then(function () {
 root.hidden = false;
 requestAnimationFrame(function () {
 requestAnimationFrame(updateControls);
 });
-syncUpsellCartState();
 track(ruleId, 'view');
 });
 })
 .catch(function () {});
-
-['cart:updated', 'cart:refresh', 'cart:update', 'cart:change', 'cart-items-added', 'CartDrawer:AfterItemAdded', 'shopify:cart:updated', 'on:cart:add'].forEach(function (eventName) {
-document.addEventListener(eventName, function () {
-syncUpsellCartState();
-});
-});
 })();
 </script>
 
@@ -631,6 +582,13 @@ syncUpsellCartState();
 "name": "Upsell Widget",
 "target": "section",
 "settings": [
+{
+"type": "text",
+"id": "api_base",
+"label": "App URL",
+"info": "Your app URL",
+"default": "https://doomling-app-navy.vercel.app"
+},
 {
 "type": "text",
 "id": "eyebrow_text",

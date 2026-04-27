@@ -1,6 +1,6 @@
 import { shopifyAdminGraphql } from "@/lib/shopify/adminGraphql";
 import type { BxgyRule } from "@/lib/shopify/bxgyRuleStore";
-import { getShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { getShop, updateShopSettings } from "@/lib/supabase/shopStore";
 
 const TITLE = "Doomlings Buy X Get Y";
 const NS = "upsale";

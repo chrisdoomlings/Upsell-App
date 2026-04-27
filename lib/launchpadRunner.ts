@@ -1,5 +1,5 @@
-import { sessionStorage } from "@/lib/firebase/sessionStore";
-import { getShop, listShops, updateShopSettings } from "@/lib/firebase/shopStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { getShop, listShops, updateShopSettings } from "@/lib/supabase/shopStore";
 import { normalizeLaunchpadSchedule, sortLaunchpadSchedules, type LaunchpadSchedule } from "@/lib/launchpad";
 import { publishTheme } from "@/lib/shopify/themeSwitcher";
 

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
-import { getPostPurchaseOfferStats } from "@/lib/firebase/postPurchaseStatsStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { getPostPurchaseOfferStats } from "@/lib/supabase/postPurchaseStatsStore";
 import { listPostPurchaseOffers } from "@/lib/shopify/postPurchaseOfferStore";
 import { COOKIE_NAME, verifyShop } from "@/lib/utils/standaloneSession";
 

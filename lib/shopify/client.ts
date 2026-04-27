@@ -1,6 +1,6 @@
 import "@shopify/shopify-api/adapters/node";
 import { shopifyApi, LATEST_API_VERSION, LogSeverity, type Shopify } from "@shopify/shopify-api";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 
 let _shopify: Shopify | null = null;
 

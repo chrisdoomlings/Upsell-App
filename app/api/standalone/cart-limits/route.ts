@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
-import { getShop as getStoredShop, updateShopSettings } from "@/lib/firebase/shopStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { getShop as getStoredShop, updateShopSettings } from "@/lib/supabase/shopStore";
 import {
   getShopCartQuantityRulesMetafield,
   setShopCartQuantityRulesMetafield,

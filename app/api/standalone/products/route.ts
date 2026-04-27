@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { verifyShop, COOKIE_NAME } from "@/lib/utils/standaloneSession";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,8 +39,8 @@ export async function GET(req: NextRequest) {
     const res = await fetch(nextUrl, { headers, cache: "no-store" });
 
     if (!res.ok) {
-      const body = await res.text();
-      return NextResponse.json({ error: `Shopify ${res.status}: ${body}` }, { status: res.status });
+      console.error("[standalone/products] Shopify request failed", { status: res.status, shop });
+      return NextResponse.json({ error: "Failed to fetch products from Shopify" }, { status: res.status });
     }
 
     const data = await res.json();

@@ -34,8 +34,8 @@ export async function GET(req: NextRequest) {
     const response = await fetch(nextUrl, { headers, cache: "no-store" });
 
     if (!response.ok) {
-      const body = await response.text();
-      return NextResponse.json({ error: `Shopify ${response.status}: ${body}` }, { status: response.status });
+      console.error("[api/products] Shopify request failed", { status: response.status, shop });
+      return NextResponse.json({ error: "Failed to fetch products from Shopify" }, { status: response.status });
     }
 
     const data = await response.json();

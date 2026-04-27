@@ -1,6 +1,6 @@
 import { createHmac, randomUUID } from "crypto";
-import { sessionStorage } from "@/lib/firebase/sessionStore";
-import { trackPostPurchaseEvent, addPostPurchaseRevenue } from "@/lib/firebase/postPurchaseStatsStore";
+import { sessionStorage } from "@/lib/supabase/sessionStore";
+import { trackPostPurchaseEvent, addPostPurchaseRevenue } from "@/lib/supabase/postPurchaseStatsStore";
 import { getShopify } from "@/lib/shopify/client";
 import { listPostPurchaseOffers, type PostPurchaseOffer } from "@/lib/shopify/postPurchaseOfferStore";
 
