@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const TABS = [
   {
@@ -38,9 +38,9 @@ const TABS = [
     key: "upsells",
     label: "Upsells",
     children: [
-      { label: "Upsell Offers", key: "upsells", active: true },
-      { label: "Analytics", key: "upsells" },
-      { label: "Help", key: "upsells" },
+      { label: "Upsell Offers", key: "upsells", section: "offers" },
+      { label: "Analytics", key: "upsells", section: "analytics" },
+      { label: "Help", key: "upsells", section: "help" },
     ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -53,9 +53,9 @@ const TABS = [
     key: "buyxgety",
     label: "Buy X Get Y",
     children: [
-      { label: "BXGY Offers", key: "buyxgety", active: true },
-      { label: "Analytics", key: "buyxgety" },
-      { label: "Help", key: "buyxgety" },
+      { label: "BXGY Offers", key: "buyxgety", section: "offers" },
+      { label: "Analytics", key: "buyxgety", section: "analytics" },
+      { label: "Help", key: "buyxgety", section: "help" },
     ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -71,9 +71,10 @@ const TABS = [
     key: "bundles",
     label: "Bundle Offers",
     children: [
-      { label: "Discount Offers", key: "bundles", active: true },
-      { label: "Analytics", key: "bundles" },
-      { label: "Help", key: "bundles" },
+      { label: "Discount Offers", key: "bundles", section: "offers" },
+      { label: "Analytics", key: "bundles", section: "analytics" },
+      { label: "Setup", key: "bundles", section: "setup" },
+      { label: "Help", key: "bundles", section: "help" },
     ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -88,9 +89,10 @@ const TABS = [
     key: "postpurchase",
     label: "Post-Purchase",
     children: [
-      { label: "Post-Purchase Flows", key: "postpurchase", active: true },
-      { label: "Analytics", key: "postpurchase" },
-      { label: "Help", key: "postpurchase" },
+      { label: "Post-Purchase Flows", key: "postpurchase", section: "flows" },
+      { label: "Analytics", key: "postpurchase", section: "analytics" },
+      { label: "Setup", key: "postpurchase", section: "setup" },
+      { label: "Help", key: "postpurchase", section: "help" },
     ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,6 +136,7 @@ export default function DashboardShell({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const [isMobile, setIsMobile] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
 
@@ -155,8 +158,10 @@ export default function DashboardShell({
     return () => media.removeEventListener("change", updateViewport);
   }, []);
 
-  const handleNavigate = (nextTab: TabKey) => {
-    router.push(`/dashboard/${nextTab}`);
+  const currentSection = searchParams.get("section");
+
+  const handleNavigate = (nextTab: TabKey, section?: string) => {
+    router.push(section ? `/dashboard/${nextTab}?section=${section}` : `/dashboard/${nextTab}`);
     if (isMobile) setMobileNavOpen(false);
   };
 
@@ -301,11 +306,12 @@ export default function DashboardShell({
                       {active && children.length > 0 && (
                         <div style={{ margin: "0.2rem 0 0.35rem 1.2rem", paddingLeft: "1rem", borderLeft: "1px solid #dfe3e8" }}>
                           {children.map((child) => {
-                            const childActive = "active" in child && child.active === true;
+                            const defaultSection = child === children[0] && !currentSection;
+                            const childActive = currentSection === child.section || defaultSection;
                             return (
                               <button
                                 key={child.label}
-                                onClick={() => handleNavigate(child.key)}
+                                onClick={() => handleNavigate(child.key, child.section)}
                                 style={{
                                   width: "100%",
                                   display: "flex",
