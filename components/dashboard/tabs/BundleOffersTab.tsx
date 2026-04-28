@@ -30,6 +30,7 @@ export default function BundleOffersTab() {
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [view, setView] = useState<"list" | "detail">("list");
+  const [query, setQuery] = useState("");
   const [name, setName] = useState("Expansions Bundle");
   const [offerType, setOfferType] = useState<"bundle" | "product">("bundle");
   const [storefrontTitle, setStorefrontTitle] = useState("Standalone bundle product");
@@ -296,9 +297,41 @@ export default function BundleOffersTab() {
     setView("detail");
   };
 
+  const copyOffer = (offer: BundleOffer) => {
+    setEditingId(null);
+    setName(`${offer.name} copy`);
+    setOfferType(offer.offerType ?? "bundle");
+    setStorefrontTitle(offer.storefrontTitle || offer.productTitle);
+    setBundleLevel(offer.bundleLevel || "product");
+    setProductId("");
+    setCode(`${offer.code}-COPY`);
+    setCompareAtPrice(offer.compareAtPrice);
+    setDiscountedPrice(offer.discountedPrice);
+    setEnabled(false);
+    setItems(offer.items ?? []);
+    setItemPickerProductId(EMPTY_ITEM_PICKER);
+    setError(null);
+    setSuccessMessage(null);
+    setView("detail");
+  };
+
   if (loading) {
     return <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading discount offers...</div>;
   }
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredOffers = normalizedQuery
+    ? offers.filter((offer) =>
+        [
+          offer.name,
+          offer.productTitle,
+          offer.storefrontTitle,
+          offer.code,
+          offer.offerType,
+          offer.bundleLevel,
+        ].some((value) => String(value ?? "").toLowerCase().includes(normalizedQuery)),
+      )
+    : offers;
 
   return (
     <>
@@ -321,317 +354,308 @@ export default function BundleOffersTab() {
         </div>
       )}
 
-      {view === "list" ? (
-        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-          <Text as="h2" variant="headingLg">Configured discount offers</Text>
-          <Button variant="primary" onClick={openNewOffer}>Create offer</Button>
-        </div>
-      ) : (
+      {view === "list" && (
         <>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
-            <BlockStack gap="100">
-              <Text as="h2" variant="headingLg">{editingId ? "Offer details" : "New offer"}</Text>
-              <Text as="p" variant="bodySm" tone="subdued">
-                {editingId ? "Update this discount offer configuration." : "Create a discount offer configuration."}
-              </Text>
-            </BlockStack>
-            <InlineStack gap="200">
-              <Button onClick={backToList}>Back to offers</Button>
-              {editingId && (
-                <Button tone="critical" variant="secondary" onClick={() => void handleDelete(editingId)} loading={deletingId === editingId} disabled={deletingId === editingId}>
-                  Delete
-                </Button>
-              )}
-            </InlineStack>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+            <h2 style={{ margin: 0, color: "#111827", fontSize: "1.45rem", fontWeight: 700 }}>Dashboard</h2>
+            <button
+              type="button"
+              onClick={openNewOffer}
+              style={{
+                background: "#202223",
+                border: "1px solid #000",
+                borderRadius: 6,
+                color: "#fff",
+                cursor: "pointer",
+                fontWeight: 700,
+                padding: "0.65rem 0.9rem",
+              }}
+            >
+              Create bundle
+            </button>
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
-        {[
-          { label: "Discount offers", value: offers.length, sub: "Products and bundles managed here" },
-          { label: "Active now", value: offers.filter((offer) => offer.enabled).length, sub: `${offers.filter((offer) => !offer.enabled).length} paused` },
-          { label: "Offer type", value: isBundleOffer ? "Bundle" : "Product", sub: "Current detail selection" },
-          { label: "Items in draft", value: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), sub: isBundleOffer ? "Total quantities inside the current bundle" : "Only used when this offer is a bundle" },
-        ].map((card) => (
-          <div key={card.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "0.85rem 0.95rem" }}>
-            <p style={{ margin: 0, fontSize: "0.73rem", color: "#6b7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>{card.label}</p>
-            <p style={{ margin: "0.24rem 0 0.12rem", fontSize: "1.25rem", fontWeight: 700, color: "#111827" }}>{card.value}</p>
-            <p style={{ margin: 0, fontSize: "0.76rem", color: "#6b7280" }}>{card.sub}</p>
-          </div>
-        ))}
+          <div style={{ background: "#fff", border: "1px solid #dfe3e8", borderRadius: 8, boxShadow: "0 1px 2px rgba(15, 23, 42, 0.05)", overflow: "hidden" }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: "0.35rem", padding: "1rem 1.25rem 0.75rem" }}>
+              <TextField
+                label="Search by bundle name"
+                labelHidden
+                value={query}
+                onChange={setQuery}
+                autoComplete="off"
+                placeholder="Search by bundle name"
+              />
+              <Button onClick={() => setQuery("")} disabled={!query}>Clear</Button>
+              <Button onClick={() => undefined}>Search</Button>
+            </div>
+            <div style={{ alignItems: "center", display: "flex", gap: "0.75rem", padding: "0.65rem 1.25rem 1rem" }}>
+              <Checkbox label="" checked={false} onChange={() => undefined} />
+              <span style={{ color: "#111827", fontSize: "0.88rem", fontWeight: 700 }}>
+                Showing {filteredOffers.length} bundle{filteredOffers.length === 1 ? "" : "s"}
+              </span>
+            </div>
+
+            {filteredOffers.length === 0 ? (
+              <p style={{ borderTop: "1px solid #dfe3e8", margin: 0, padding: "1.5rem", color: "#6b7280" }}>
+                {offers.length === 0 ? "No bundles yet. Create your first bundle to start." : "No bundles match your search."}
+              </p>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={{ width: "100%", minWidth: 760, borderCollapse: "collapse" }}>
+                  <tbody>
+                    {filteredOffers.map((offer) => (
+                      <tr key={offer.id} style={{ borderTop: "1px solid #dfe3e8" }}>
+                        <td style={{ padding: "0.95rem 1.25rem", width: 48, verticalAlign: "top" }}>
+                          <Checkbox label="" checked={false} onChange={() => undefined} />
+                        </td>
+                        <td style={{ padding: "0.95rem 0.8rem", verticalAlign: "top" }}>
+                          <button
+                            type="button"
+                            onClick={() => startEdit(offer)}
+                            style={{ background: "transparent", border: 0, color: "#111827", cursor: "pointer", font: "inherit", fontWeight: 700, padding: 0, textAlign: "left" }}
+                          >
+                            {offer.name}
+                          </button>
+                          <div style={{ color: "#6b7280", fontSize: "0.78rem", marginTop: "0.15rem" }}>{offer.storefrontTitle || offer.productTitle}</div>
+                        </td>
+                        <td style={{ color: "#374151", fontSize: "0.84rem", padding: "0.95rem 0.8rem", verticalAlign: "top", whiteSpace: "nowrap" }}>
+                          {offer.offerType === "product" ? "Standalone product" : `${offer.items.length} product${offer.items.length === 1 ? "" : "s"}`}
+                        </td>
+                        <td style={{ color: "#374151", fontSize: "0.84rem", padding: "0.95rem 0.8rem", verticalAlign: "top", whiteSpace: "nowrap" }}>
+                          {offer.offerType === "product" ? "Standalone product" : offer.bundleLevel === "variant" ? "Variant level" : "Standalone product"}
+                        </td>
+                        <td style={{ padding: "0.95rem 0.8rem", textAlign: "right", verticalAlign: "top", whiteSpace: "nowrap" }}>
+                          <button type="button" onClick={() => startEdit(offer)} style={{ background: "transparent", border: 0, color: "#2563eb", cursor: "pointer", fontWeight: 500, marginRight: "1rem" }}>Edit</button>
+                          <button type="button" onClick={() => copyOffer(offer)} style={{ background: "transparent", border: 0, color: "#2563eb", cursor: "pointer", fontWeight: 500 }}>Copy</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </>
       )}
 
       {view === "detail" && (
-      <BlockStack gap="400">
-        <Card>
+        <>
+          <div style={{ alignItems: "center", display: "flex", justifyContent: "space-between", gap: "1rem", marginBottom: "1.5rem" }}>
+            <div style={{ alignItems: "center", display: "flex", gap: "1rem" }}>
+              <button
+                type="button"
+                onClick={backToList}
+                aria-label="Back to bundles"
+                style={{
+                  alignItems: "center",
+                  background: "#fff",
+                  border: "1px solid #c9cccf",
+                  borderRadius: 4,
+                  color: "#374151",
+                  cursor: "pointer",
+                  display: "inline-flex",
+                  fontSize: "1.4rem",
+                  height: 40,
+                  justifyContent: "center",
+                  lineHeight: 1,
+                  width: 40,
+                }}
+              >
+                {"<"}
+              </button>
+              <h2 style={{ margin: 0, color: "#111827", fontSize: "1.45rem", fontWeight: 700 }}>Bundle</h2>
+            </div>
+            <button
+              type="button"
+              onClick={handleSave}
+              disabled={saving}
+              style={{
+                background: saving ? "#6b7280" : "#202223",
+                border: "1px solid #000",
+                borderRadius: 6,
+                color: "#fff",
+                cursor: saving ? "wait" : "pointer",
+                fontWeight: 700,
+                padding: "0.65rem 0.9rem",
+              }}
+            >
+              {saving ? "Saving..." : "Save bundle"}
+            </button>
+          </div>
+
           <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">General information</Text>
-            <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
-              <TextField label="Offer name" value={name} onChange={setName} autoComplete="off" helpText="Internal name for your team. Customers will not see this name." />
-              <TextField label="Title" value={storefrontTitle} onChange={setStorefrontTitle} autoComplete="off" helpText="This title is used for the discounted storefront product." />
-              <Select
-                label="Offer type"
-                options={[
-                  { label: "Bundle product", value: "bundle" },
-                  { label: "Standalone discounted product", value: "product" },
-                ]}
-                value={offerType}
-                onChange={(value) => setOfferType(value === "product" ? "product" : "bundle")}
-                helpText="Choose bundle product when you want to track included items. Choose standalone product when you only need a product-specific native discount code."
-              />
-              <PolarisProductAutocomplete
-                products={editingId ? products : selectableStandaloneProducts}
-                value={productId}
-                onChange={setProductId}
-                label="Storefront product"
-                placeholder="Search storefront product"
-                helpText="Choose the product that should show the sale price and receive the native discount code in cart."
-              />
-              <div style={{ display: "flex", alignItems: "end" }}>
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">General information</Text>
+                <TextField label="Bundle name" value={name} onChange={setName} autoComplete="off" helpText="Bundle name won't be visible to your customers." />
+                <TextField label="Title" value={storefrontTitle} onChange={setStorefrontTitle} autoComplete="off" helpText="This will be used as the title of the standalone product." />
+                <InlineGrid columns={{ xs: 1, md: 2 }} gap="400">
+                  <Select
+                    label="Offer type"
+                    options={[
+                      { label: "Bundle product", value: "bundle" },
+                      { label: "Standalone discounted product", value: "product" },
+                    ]}
+                    value={offerType}
+                    onChange={(value) => setOfferType(value === "product" ? "product" : "bundle")}
+                  />
+                  <PolarisProductAutocomplete
+                    products={editingId ? products : selectableStandaloneProducts}
+                    value={productId}
+                    onChange={setProductId}
+                    label="Storefront product"
+                    placeholder="Search storefront product"
+                  />
+                </InlineGrid>
                 <Checkbox label="Offer is active" checked={enabled} onChange={setEnabled} />
-              </div>
-            </InlineGrid>
-          </BlockStack>
-        </Card>
-
-        {isBundleOffer && (
-          <Card>
-            <BlockStack gap="300">
-              <Text as="h2" variant="headingMd">Bundle product level</Text>
-              <Select
-                label="Bundle level"
-                options={[
-                  { label: "Product level", value: "product" },
-                  { label: "Variant level", value: "variant" },
-                ]}
-                value={bundleLevel}
-                onChange={(value) => setBundleLevel(value === "variant" ? "variant" : "product")}
-                helpText="Use product level for simple bundles. Use variant level if each bundled item should target a specific variant."
-              />
-            </BlockStack>
-          </Card>
-        )}
-
-        <Card>
-          <BlockStack gap="400">
-            <Text as="h2" variant="headingMd">Price</Text>
-            <Text as="p" tone="subdued">You control the compare-at value and the discounted storefront price shown for this product throughout the storefront.</Text>
-            <InlineGrid columns={{ xs: 1, md: 3 }} gap="400">
-              <TextField label="Public discount code" value={code} onChange={(value) => setCode(value.toUpperCase())} autoComplete="off" helpText="Shown in cart and checkout, for example EXPANSIONS." />
-              <TextField label="Compare-at / value price" type="number" min={0} step={0.01} value={compareAtPrice} onChange={setCompareAtPrice} autoComplete="off" />
-              <TextField label="Discounted storefront price" type="number" min={0} step={0.01} value={discountedPrice} onChange={setDiscountedPrice} autoComplete="off" />
-            </InlineGrid>
-          </BlockStack>
-        </Card>
-
-        {isBundleOffer && (
-        <Card>
-          <BlockStack gap="400">
-            <BlockStack gap="100">
-              <Text as="h2" variant="headingMd">Products in the bundle</Text>
-              <Text as="p" tone="subdued">
-                Add the products you want to include in this bundle. You can include multiple products and set a quantity for each one.
-              </Text>
-            </BlockStack>
-
-            <InlineStack gap="300" blockAlign="end" wrap>
-              <div style={{ flex: 1, minWidth: 260 }}>
-                <PolarisProductAutocomplete
-                  products={availableBundleItems}
-                  value={itemPickerProductId}
-                  onChange={setItemPickerProductId}
-                  label="Add product"
-                  placeholder="Search product to include"
-                  helpText="You can add up to 30 products to a bundle."
-                />
-              </div>
-              <Button onClick={addBundleItem} disabled={!itemPickerProductId || items.length >= 30}>
-                Add product
-              </Button>
-            </InlineStack>
-
-            {items.length === 0 ? (
-              <div style={{ border: "1px dashed #d1d5db", borderRadius: 12, padding: "1rem", color: "#6b7280" }}>
-                No bundled products yet. Add your first product above.
-              </div>
-            ) : (
-              <BlockStack gap="300">
-                {items.map((item) => {
-                  const product = products.find((entry) => String(entry.id) === String(item.productId));
-                  const variantOptions = [
-                    { label: "Select variant", value: "" },
-                    ...((product?.variants ?? []).map((variant) => ({ label: variant.title, value: String(variant.id) }))),
-                  ];
-                  const needsVariant = bundleLevel === "variant" && hasMeaningfulVariants(product);
-
-                  return (
-                    <div key={item.productId} style={{ border: "1px solid #e5e7eb", borderRadius: 14, padding: "0.95rem 1rem", background: "#fff" }}>
-                      <InlineGrid columns={{ xs: 1, md: needsVariant ? 4 : 3 }} gap="300">
-                        <InlineStack gap="300" blockAlign="center">
-                          {item.image ? (
-                            <Thumbnail source={item.image} alt={item.productTitle} size="small" />
-                          ) : null}
-                          <BlockStack gap="050">
-                            <Text as="p" variant="bodyMd" fontWeight="semibold">{item.productTitle}</Text>
-                            <Text as="p" variant="bodySm" tone="subdued">
-                              {needsVariant ? "Choose a variant and quantity for this product." : "Set how many of this product should be included."}
-                            </Text>
-                          </BlockStack>
-                        </InlineStack>
-
-                        {needsVariant ? (
-                          <Select
-                            label="Variant"
-                            options={variantOptions}
-                            value={item.variantId ?? ""}
-                            onChange={(value) => {
-                              const selectedVariant = product?.variants.find((variant) => String(variant.id) === value);
-                              updateItem(String(item.productId), (current) => ({
-                                ...current,
-                                variantId: value || undefined,
-                                variantTitle: selectedVariant?.title,
-                              }));
-                            }}
-                          />
-                        ) : (
-                          <div />
-                        )}
-
-                        <TextField
-                          label="Quantity"
-                          type="number"
-                          min={1}
-                          value={String(item.quantity || 1)}
-                          onChange={(value) => {
-                            updateItem(String(item.productId), (current) => ({
-                              ...current,
-                              quantity: Math.max(1, Number.parseInt(value || "1", 10) || 1),
-                            }));
-                          }}
-                          autoComplete="off"
-                        />
-
-                        <div style={{ display: "flex", alignItems: "end", justifyContent: "flex-end" }}>
-                          <Button tone="critical" variant="tertiary" onClick={() => removeItem(String(item.productId))}>
-                            Remove
-                          </Button>
-                        </div>
-                      </InlineGrid>
-                    </div>
-                  );
-                })}
               </BlockStack>
+            </Card>
+
+            {isBundleOffer && (
+              <Card>
+                <BlockStack gap="300">
+                  <Text as="h2" variant="headingMd">Bundle product level</Text>
+                  <Select
+                    label="Bundle level"
+                    options={[
+                      { label: "Product level", value: "product" },
+                      { label: "Variant level", value: "variant" },
+                    ]}
+                    value={bundleLevel}
+                    onChange={(value) => setBundleLevel(value === "variant" ? "variant" : "product")}
+                  />
+                </BlockStack>
+              </Card>
             )}
-          </BlockStack>
-        </Card>
-        )}
 
-        <InlineStack align="space-between" blockAlign="center">
-          <Text as="p" tone="subdued">
-            Enable the `Bundle offers` app embed in your theme so homepage, collection, and product pages show the sale price preview and apply the matching code in cart.
-          </Text>
-          <InlineStack gap="300">
-            <Button onClick={backToList} disabled={saving}>Cancel</Button>
-            <Button variant="primary" onClick={handleSave} loading={saving}>
-              {editingId ? "Update offer" : "Save offer"}
-            </Button>
-          </InlineStack>
-        </InlineStack>
-      </BlockStack>
-      )}
+            <Card>
+              <BlockStack gap="400">
+                <Text as="h2" variant="headingMd">Price</Text>
+                <Text as="p" tone="subdued">Set the discount code and storefront sale pricing for this bundle.</Text>
+                <InlineGrid columns={{ xs: 1, md: 3 }} gap="400">
+                  <TextField label="Public discount code" value={code} onChange={(value) => setCode(value.toUpperCase())} autoComplete="off" />
+                  <TextField label="Compare-at / value price" type="number" min={0} step={0.01} value={compareAtPrice} onChange={setCompareAtPrice} autoComplete="off" />
+                  <TextField label="Discounted storefront price" type="number" min={0} step={0.01} value={discountedPrice} onChange={setDiscountedPrice} autoComplete="off" />
+                </InlineGrid>
+              </BlockStack>
+            </Card>
 
-      {view === "list" && (
-      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
-        <div style={{ padding: "1rem 1.1rem", borderBottom: "1px solid #e5e7eb" }}>
-          <p style={{ margin: 0, fontWeight: 700, color: "#111827" }}>Configured discount offers</p>
-        </div>
-        {offers.length === 0 ? (
-          <p style={{ margin: 0, padding: "1.5rem", color: "#6b7280" }}>
-            No discount offers yet. Create your first offer, then enable the Bundle Offers app embed in the theme customizer.
-          </p>
-        ) : (
-          <table style={{ width: "100%", borderCollapse: "collapse" }}>
-            <thead>
-              <tr style={{ borderBottom: "1px solid #e5e7eb", background: "#fafafa" }}>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Offer</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Storefront product</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Contents</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Code</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Storefront price</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "left", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Status</th>
-                <th style={{ padding: "0.75rem 0.9rem", textAlign: "right", fontSize: "0.76rem", fontWeight: 600, color: "#6b7280" }}>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {offers.map((offer, index) => (
-                <tr key={offer.id} style={{ borderBottom: index < offers.length - 1 ? "1px solid #f3f4f6" : "none" }}>
-                  <td style={{ padding: "0.85rem 0.9rem" }}>
-                    <div style={{ fontSize: "0.86rem", fontWeight: 700, color: "#111827" }}>{offer.name}</div>
-                    <div style={{ fontSize: "0.76rem", color: "#6b7280", marginTop: "0.15rem" }}>
-                      {offer.offerType === "product"
-                        ? "Standalone discounted product"
-                        : offer.bundleLevel === "variant"
-                          ? "Bundle at variant level"
-                          : "Bundle at product level"}
+            {isBundleOffer && (
+              <Card>
+                <BlockStack gap="400">
+                  <BlockStack gap="100">
+                    <Text as="h2" variant="headingMd">Products in the bundle</Text>
+                    <Text as="p" tone="subdued">
+                      Select the products you want to offer in the bundle. Shopify allows up to 30 products per standalone product bundle.
+                    </Text>
+                  </BlockStack>
+
+                  <InlineStack gap="300" blockAlign="end" wrap>
+                    <div style={{ flex: 1, minWidth: 260 }}>
+                      <PolarisProductAutocomplete
+                        products={availableBundleItems}
+                        value={itemPickerProductId}
+                        onChange={setItemPickerProductId}
+                        label="Add product"
+                        placeholder="Search product to include"
+                      />
                     </div>
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem", fontSize: "0.82rem", color: "#374151" }}>
-                    <div>{offer.productTitle}</div>
-                    <div style={{ fontSize: "0.76rem", color: "#6b7280", marginTop: "0.15rem" }}>{offer.storefrontTitle}</div>
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem", fontSize: "0.82rem", color: "#374151" }}>
-                    {offer.offerType === "product" ? (
-                      <div style={{ fontSize: "0.76rem", color: "#6b7280", maxWidth: 280 }}>
-                        No bundle contents tracked for this offer.
-                      </div>
-                    ) : (
-                      <>
-                        <div style={{ fontWeight: 600, color: "#111827" }}>
-                          {offer.items.length} product{offer.items.length === 1 ? "" : "s"}
-                        </div>
-                        <div style={{ fontSize: "0.76rem", color: "#6b7280", marginTop: "0.15rem", maxWidth: 280 }}>
-                          {offer.items
-                            .slice(0, 3)
-                            .map((item) => `${item.productTitle} x${item.quantity}`)
-                            .join(", ")}
-                          {offer.items.length > 3 ? ` +${offer.items.length - 3} more` : ""}
-                        </div>
-                      </>
-                    )}
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem" }}>
-                    <span style={{ display: "inline-flex", padding: "0.22rem 0.55rem", borderRadius: "999px", background: "#eef2ff", color: "#4338ca", fontSize: "0.76rem", fontWeight: 700 }}>
-                      {offer.code}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem", fontSize: "0.82rem", color: "#374151" }}>
-                    <span style={{ fontWeight: 700, color: "#111827" }}>{fmt(Number(offer.discountedPrice), "USD")}</span>
-                    <span style={{ marginLeft: "0.45rem", textDecoration: "line-through", color: "#6b7280" }}>{fmt(Number(offer.compareAtPrice), "USD")}</span>
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem" }}>
-                    <span style={{ display: "inline-flex", padding: "0.25rem 0.55rem", borderRadius: "999px", background: offer.enabled ? "#ecfdf5" : "#f3f4f6", color: offer.enabled ? "#166534" : "#6b7280", fontSize: "0.76rem", fontWeight: 700 }}>
-                      {offer.enabled ? "Active" : "Paused"}
-                    </span>
-                  </td>
-                  <td style={{ padding: "0.85rem 0.9rem", textAlign: "right" }}>
-                    <InlineStack gap="200" align="end">
-                      <Button size="micro" onClick={() => startEdit(offer)}>Edit</Button>
-                      <Button size="micro" tone="critical" variant="tertiary" onClick={() => void handleDelete(offer.id)} loading={deletingId === offer.id} disabled={deletingId === offer.id}>
-                        Delete
-                      </Button>
-                    </InlineStack>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-      )}
+                    <Button onClick={addBundleItem} disabled={!itemPickerProductId || items.length >= 30}>
+                      Add product
+                    </Button>
+                  </InlineStack>
 
-      {view === "detail" && (
-      <div style={{ marginTop: "1.5rem" }}>
+                  <div style={{ alignItems: "center", display: "flex", gap: "0.75rem", paddingTop: "0.25rem" }}>
+                    <Checkbox label="" checked={false} onChange={() => undefined} />
+                    <span style={{ color: "#111827", fontSize: "0.88rem", fontWeight: 700 }}>
+                      Showing {items.length} product{items.length === 1 ? "" : "s"}
+                    </span>
+                  </div>
+
+                  {items.length === 0 ? (
+                    <div style={{ border: "1px dashed #d1d5db", borderRadius: 8, padding: "1rem", color: "#6b7280" }}>
+                      No bundled products yet. Add your first product above.
+                    </div>
+                  ) : (
+                    <div style={{ borderTop: "1px solid #e5e7eb" }}>
+                      {items.map((item) => {
+                        const product = products.find((entry) => String(entry.id) === String(item.productId));
+                        const variantOptions = [
+                          { label: "Select variant", value: "" },
+                          ...((product?.variants ?? []).map((variant) => ({ label: variant.title, value: String(variant.id) }))),
+                        ];
+                        const needsVariant = bundleLevel === "variant" && hasMeaningfulVariants(product);
+
+                        return (
+                          <div key={item.productId} style={{ alignItems: "center", borderBottom: "1px solid #e5e7eb", display: "grid", gap: "1rem", gridTemplateColumns: "auto minmax(180px, 1fr) minmax(100px, 150px) auto", padding: "0.95rem 0" }}>
+                            <Checkbox label="" checked={false} onChange={() => undefined} />
+                            <InlineStack gap="300" blockAlign="center">
+                              {item.image ? <Thumbnail source={item.image} alt={item.productTitle} size="small" /> : null}
+                              <BlockStack gap="050">
+                                <Text as="p" variant="bodyMd" fontWeight="semibold">{item.productTitle}</Text>
+                                <Text as="p" variant="bodySm" tone="subdued">
+                                  {needsVariant ? "Choose a variant." : "Set bundle quantity."}
+                                </Text>
+                              </BlockStack>
+                            </InlineStack>
+                            {needsVariant ? (
+                              <Select
+                                label="Variant"
+                                options={variantOptions}
+                                value={item.variantId ?? ""}
+                                onChange={(value) => {
+                                  const selectedVariant = product?.variants.find((variant) => String(variant.id) === value);
+                                  updateItem(String(item.productId), (current) => ({
+                                    ...current,
+                                    variantId: value || undefined,
+                                    variantTitle: selectedVariant?.title,
+                                  }));
+                                }}
+                              />
+                            ) : (
+                              <span style={{ color: "#9ca3af", fontSize: "0.82rem" }}>1 variant(s)</span>
+                            )}
+                            <TextField
+                              label="Quantity"
+                              type="number"
+                              min={1}
+                              value={String(item.quantity || 1)}
+                              onChange={(value) => {
+                                updateItem(String(item.productId), (current) => ({
+                                  ...current,
+                                  quantity: Math.max(1, Number.parseInt(value || "1", 10) || 1),
+                                }));
+                              }}
+                              autoComplete="off"
+                            />
+                            <Button tone="critical" variant="tertiary" onClick={() => removeItem(String(item.productId))}>
+                              Remove
+                            </Button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </BlockStack>
+              </Card>
+            )}
+
+            <InlineStack align="space-between" blockAlign="center">
+              <Text as="p" tone="subdued">
+                Enable the `Bundle offers` app embed in your theme so sale price preview and cart code behavior can run on the storefront.
+              </Text>
+              <InlineStack gap="300">
+                <Button onClick={backToList} disabled={saving}>Cancel</Button>
+                {editingId && (
+                  <Button tone="critical" variant="secondary" onClick={() => void handleDelete(editingId)} loading={deletingId === editingId} disabled={deletingId === editingId}>
+                    Delete
+                  </Button>
+                )}
+              </InlineStack>
+            </InlineStack>
+          </BlockStack>
+
+          <div style={{ marginTop: "1.5rem" }}>
         <FeatureHelpCard
           intro="You can browse our app guide to understand discount offers, read simple examples, and get setup help whenever you need it."
           sections={[
@@ -665,7 +689,8 @@ export default function BundleOffersTab() {
             },
           ]}
         />
-      </div>
+          </div>
+        </>
       )}
     </>
   );
