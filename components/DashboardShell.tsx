@@ -37,7 +37,11 @@ const TABS = [
   {
     key: "upsells",
     label: "Upsells",
-    children: [{ label: "Upsell Offers", key: "upsells" }],
+    children: [
+      { label: "Upsell Offers", key: "upsells", active: true },
+      { label: "Analytics", key: "upsells" },
+      { label: "Help", key: "upsells" },
+    ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -48,7 +52,11 @@ const TABS = [
   {
     key: "buyxgety",
     label: "Buy X Get Y",
-    children: [{ label: "BXGY Offers", key: "buyxgety" }],
+    children: [
+      { label: "BXGY Offers", key: "buyxgety", active: true },
+      { label: "Analytics", key: "buyxgety" },
+      { label: "Help", key: "buyxgety" },
+    ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M7 7h10" />
@@ -62,7 +70,11 @@ const TABS = [
   {
     key: "bundles",
     label: "Bundle Offers",
-    children: [{ label: "Discount Offers", key: "bundles" }],
+    children: [
+      { label: "Discount Offers", key: "bundles", active: true },
+      { label: "Analytics", key: "bundles" },
+      { label: "Help", key: "bundles" },
+    ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="7" width="7" height="13" rx="1" />
@@ -75,7 +87,11 @@ const TABS = [
   {
     key: "postpurchase",
     label: "Post-Purchase",
-    children: [{ label: "Post-Purchase Flows", key: "postpurchase" }],
+    children: [
+      { label: "Post-Purchase Flows", key: "postpurchase", active: true },
+      { label: "Analytics", key: "postpurchase" },
+      { label: "Help", key: "postpurchase" },
+    ],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 11l3 3L22 4" />
@@ -250,7 +266,7 @@ export default function DashboardShell({
                   const active = tab === t.key;
                   const children = "children" in t ? t.children : [];
                   return (
-                    <div key={t.key} style={{ marginBottom: children.length ? "0.35rem" : "0.1rem" }}>
+                    <div key={t.key} style={{ marginBottom: active && children.length ? "0.45rem" : "0.1rem" }}>
                       <button
                         onClick={() => handleNavigate(t.key)}
                         style={{
@@ -282,10 +298,10 @@ export default function DashboardShell({
                         <span style={{ flexShrink: 0, color: active ? "#008060" : "currentColor", opacity: active ? 1 : 0.55 }}>{t.icon}</span>
                         <span style={{ minWidth: 0 }}>{t.label}</span>
                       </button>
-                      {children.length > 0 && (
-                        <div style={{ margin: "0.15rem 0 0.15rem 1.85rem", paddingLeft: "0.55rem", borderLeft: "1px solid #e5e7eb" }}>
+                      {active && children.length > 0 && (
+                        <div style={{ margin: "0.2rem 0 0.35rem 1.2rem", paddingLeft: "1rem", borderLeft: "1px solid #dfe3e8" }}>
                           {children.map((child) => {
-                            const childActive = tab === child.key;
+                            const childActive = "active" in child && child.active === true;
                             return (
                               <button
                                 key={child.label}
@@ -294,15 +310,15 @@ export default function DashboardShell({
                                   width: "100%",
                                   display: "flex",
                                   alignItems: "center",
-                                  gap: "0.45rem",
-                                  padding: "0.4rem 0.45rem",
+                                  gap: "0.5rem",
+                                  padding: "0.42rem 0.45rem",
                                   border: "none",
-                                  borderRadius: "8px",
+                                  borderRadius: "6px",
                                   background: "transparent",
                                   color: childActive ? "#065f46" : "#6b7280",
                                   cursor: "pointer",
-                                  fontSize: "0.86rem",
-                                  fontWeight: childActive ? 600 : 500,
+                                  fontSize: "0.88rem",
+                                  fontWeight: childActive ? 700 : 500,
                                   textAlign: "left",
                                 }}
                                 onMouseEnter={(e) => {
@@ -312,7 +328,7 @@ export default function DashboardShell({
                                   e.currentTarget.style.background = "transparent";
                                 }}
                               >
-                                <span style={{ color: childActive ? "#008060" : "#9ca3af", fontSize: "0.85rem" }}>{">"}</span>
+                                <span style={{ color: childActive ? "#008060" : "#9ca3af", fontSize: "0.82rem", fontWeight: 700 }}>{">"}</span>
                                 <span style={{ minWidth: 0 }}>{child.label}</span>
                               </button>
                             );
