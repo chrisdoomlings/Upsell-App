@@ -37,6 +37,7 @@ const TABS = [
   {
     key: "upsells",
     label: "Upsells",
+    children: [{ label: "Upsell Offers", key: "upsells" }],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="23 6 13.5 15.5 8.5 10.5 1 18" />
@@ -47,6 +48,7 @@ const TABS = [
   {
     key: "buyxgety",
     label: "Buy X Get Y",
+    children: [{ label: "BXGY Offers", key: "buyxgety" }],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M7 7h10" />
@@ -60,6 +62,7 @@ const TABS = [
   {
     key: "bundles",
     label: "Bundle Offers",
+    children: [{ label: "Discount Offers", key: "bundles" }],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="7" width="7" height="13" rx="1" />
@@ -72,6 +75,7 @@ const TABS = [
   {
     key: "postpurchase",
     label: "Post-Purchase",
+    children: [{ label: "Post-Purchase Flows", key: "postpurchase" }],
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M9 11l3 3L22 4" />
@@ -244,39 +248,78 @@ export default function DashboardShell({
                 ) : null}
                 {groupTabs.map((t) => {
                   const active = tab === t.key;
+                  const children = "children" in t ? t.children : [];
                   return (
-                    <button
-                      key={t.key}
-                      onClick={() => handleNavigate(t.key)}
-                      style={{
-                        width: "100%",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: "0.65rem",
-                        padding: "0.7rem 0.75rem",
-                        paddingLeft: active ? "calc(0.75rem - 3px)" : "0.75rem",
-                        marginBottom: "0.1rem",
-                        borderRadius: "10px",
-                        border: "none",
-                        borderLeft: active ? "3px solid #008060" : "3px solid transparent",
-                        background: active ? "#ecfdf5" : "transparent",
-                        color: active ? "#065f46" : "#4b5563",
-                        fontWeight: active ? 600 : 400,
-                        fontSize: "0.92rem",
-                        cursor: "pointer",
-                        textAlign: "left",
-                        transition: "background 0.15s, color 0.15s",
-                      }}
-                      onMouseEnter={(e) => {
-                        if (!active) e.currentTarget.style.background = "#f9fafb";
-                      }}
-                      onMouseLeave={(e) => {
-                        if (!active) e.currentTarget.style.background = "transparent";
-                      }}
-                    >
-                      <span style={{ flexShrink: 0, color: active ? "#008060" : "currentColor", opacity: active ? 1 : 0.55 }}>{t.icon}</span>
-                      <span style={{ minWidth: 0 }}>{t.label}</span>
-                    </button>
+                    <div key={t.key} style={{ marginBottom: children.length ? "0.35rem" : "0.1rem" }}>
+                      <button
+                        onClick={() => handleNavigate(t.key)}
+                        style={{
+                          width: "100%",
+                          display: "flex",
+                          alignItems: "center",
+                          gap: "0.65rem",
+                          padding: "0.7rem 0.75rem",
+                          paddingLeft: active ? "calc(0.75rem - 3px)" : "0.75rem",
+                          marginBottom: "0.1rem",
+                          borderRadius: "10px",
+                          border: "none",
+                          borderLeft: active ? "3px solid #008060" : "3px solid transparent",
+                          background: active ? "#ecfdf5" : "transparent",
+                          color: active ? "#065f46" : "#4b5563",
+                          fontWeight: active ? 600 : 400,
+                          fontSize: "0.92rem",
+                          cursor: "pointer",
+                          textAlign: "left",
+                          transition: "background 0.15s, color 0.15s",
+                        }}
+                        onMouseEnter={(e) => {
+                          if (!active) e.currentTarget.style.background = "#f9fafb";
+                        }}
+                        onMouseLeave={(e) => {
+                          if (!active) e.currentTarget.style.background = "transparent";
+                        }}
+                      >
+                        <span style={{ flexShrink: 0, color: active ? "#008060" : "currentColor", opacity: active ? 1 : 0.55 }}>{t.icon}</span>
+                        <span style={{ minWidth: 0 }}>{t.label}</span>
+                      </button>
+                      {children.length > 0 && (
+                        <div style={{ margin: "0.15rem 0 0.15rem 1.85rem", paddingLeft: "0.55rem", borderLeft: "1px solid #e5e7eb" }}>
+                          {children.map((child) => {
+                            const childActive = tab === child.key;
+                            return (
+                              <button
+                                key={child.label}
+                                onClick={() => handleNavigate(child.key)}
+                                style={{
+                                  width: "100%",
+                                  display: "flex",
+                                  alignItems: "center",
+                                  gap: "0.45rem",
+                                  padding: "0.4rem 0.45rem",
+                                  border: "none",
+                                  borderRadius: "8px",
+                                  background: "transparent",
+                                  color: childActive ? "#065f46" : "#6b7280",
+                                  cursor: "pointer",
+                                  fontSize: "0.86rem",
+                                  fontWeight: childActive ? 600 : 500,
+                                  textAlign: "left",
+                                }}
+                                onMouseEnter={(e) => {
+                                  e.currentTarget.style.background = "#f9fafb";
+                                }}
+                                onMouseLeave={(e) => {
+                                  e.currentTarget.style.background = "transparent";
+                                }}
+                              >
+                                <span style={{ color: childActive ? "#008060" : "#9ca3af", fontSize: "0.85rem" }}>{">"}</span>
+                                <span style={{ minWidth: 0 }}>{child.label}</span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
                   );
                 })}
               </div>
