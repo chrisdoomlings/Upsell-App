@@ -29,6 +29,7 @@ export default function BundleOffersTab() {
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [view, setView] = useState<"list" | "detail">("list");
   const [name, setName] = useState("Expansions Bundle");
   const [offerType, setOfferType] = useState<"bundle" | "product">("bundle");
   const [storefrontTitle, setStorefrontTitle] = useState("Standalone bundle product");
@@ -72,6 +73,19 @@ export default function BundleOffersTab() {
     setItemPickerProductId(EMPTY_ITEM_PICKER);
   };
 
+  const openNewOffer = () => {
+    resetForm();
+    setError(null);
+    setSuccessMessage(null);
+    setView("detail");
+  };
+
+  const backToList = () => {
+    resetForm();
+    setError(null);
+    setView("list");
+  };
+
   const selectedBundleProduct = products.find((product) => String(product.id) === productId) ?? null;
   const usedStandaloneProductIds = new Set(
     offers.filter((offer) => offer.id !== editingId).map((offer) => String(offer.productId)),
@@ -79,13 +93,6 @@ export default function BundleOffersTab() {
   const selectableStandaloneProducts = products.filter(
     (product) => !usedStandaloneProductIds.has(String(product.id)),
   );
-  const totalSavings = offers.reduce((sum, offer) => {
-    const comparePrice = Number(offer.compareAtPrice);
-    const salePrice = Number(offer.discountedPrice);
-    return sum + Math.max(comparePrice - salePrice, 0);
-  }, 0);
-
-  const itemCount = items.reduce((sum, item) => sum + Number(item.quantity || 0), 0);
   const isBundleOffer = offerType === "bundle";
 
   const availableBundleItems = useMemo(() => {
@@ -241,6 +248,7 @@ export default function BundleOffersTab() {
       } else {
         setSuccessMessage(wasEditing ? "Offer updated." : "Offer created.");
       }
+      setView("list");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to save discount offer.");
     } finally {
@@ -258,7 +266,10 @@ export default function BundleOffersTab() {
       const data = await safeJson<{ error?: string }>(response);
       if (!response.ok) throw new Error(data?.error ?? `HTTP ${response.status}`);
       setOffers((current) => current.filter((offer) => offer.id !== offerId));
-      if (editingId === offerId) resetForm();
+      if (editingId === offerId) {
+        resetForm();
+        setView("list");
+      }
       setSuccessMessage("Offer deleted.");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to delete discount offer.");
@@ -282,6 +293,7 @@ export default function BundleOffersTab() {
     setItemPickerProductId(EMPTY_ITEM_PICKER);
     setError(null);
     setSuccessMessage(null);
+    setView("detail");
   };
 
   if (loading) {
@@ -309,12 +321,36 @@ export default function BundleOffersTab() {
         </div>
       )}
 
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
+      {view === "list" ? (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+          <Text as="h2" variant="headingLg">Configured discount offers</Text>
+          <Button variant="primary" onClick={openNewOffer}>Create offer</Button>
+        </div>
+      ) : (
+        <>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: "1rem", marginBottom: "1rem", flexWrap: "wrap" }}>
+            <BlockStack gap="100">
+              <Text as="h2" variant="headingLg">{editingId ? "Offer details" : "New offer"}</Text>
+              <Text as="p" variant="bodySm" tone="subdued">
+                {editingId ? "Update this discount offer configuration." : "Create a discount offer configuration."}
+              </Text>
+            </BlockStack>
+            <InlineStack gap="200">
+              <Button onClick={backToList}>Back to offers</Button>
+              {editingId && (
+                <Button tone="critical" variant="secondary" onClick={() => void handleDelete(editingId)} loading={deletingId === editingId} disabled={deletingId === editingId}>
+                  Delete
+                </Button>
+              )}
+            </InlineStack>
+          </div>
+
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(180px, 1fr))", gap: "0.75rem", marginBottom: "1rem" }}>
         {[
           { label: "Discount offers", value: offers.length, sub: "Products and bundles managed here" },
           { label: "Active now", value: offers.filter((offer) => offer.enabled).length, sub: `${offers.filter((offer) => !offer.enabled).length} paused` },
-          { label: "Tracked savings", value: fmt(totalSavings, "USD"), sub: "Difference between compare-at and sale price" },
-          { label: "Items in draft", value: itemCount, sub: isBundleOffer ? "Total quantities inside the current bundle" : "Only used when this offer is a bundle" },
+          { label: "Offer type", value: isBundleOffer ? "Bundle" : "Product", sub: "Current detail selection" },
+          { label: "Items in draft", value: items.reduce((sum, item) => sum + Number(item.quantity || 0), 0), sub: isBundleOffer ? "Total quantities inside the current bundle" : "Only used when this offer is a bundle" },
         ].map((card) => (
           <div key={card.label} style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", padding: "0.85rem 0.95rem" }}>
             <p style={{ margin: 0, fontSize: "0.73rem", color: "#6b7280", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.03em" }}>{card.label}</p>
@@ -322,8 +358,11 @@ export default function BundleOffersTab() {
             <p style={{ margin: 0, fontSize: "0.76rem", color: "#6b7280" }}>{card.sub}</p>
           </div>
         ))}
-      </div>
+          </div>
+        </>
+      )}
 
+      {view === "detail" && (
       <BlockStack gap="400">
         <Card>
           <BlockStack gap="400">
@@ -493,21 +532,23 @@ export default function BundleOffersTab() {
             Enable the `Bundle offers` app embed in your theme so homepage, collection, and product pages show the sale price preview and apply the matching code in cart.
           </Text>
           <InlineStack gap="300">
-            {editingId && <Button onClick={resetForm} disabled={saving}>Cancel</Button>}
+            <Button onClick={backToList} disabled={saving}>Cancel</Button>
             <Button variant="primary" onClick={handleSave} loading={saving}>
               {editingId ? "Update offer" : "Save offer"}
             </Button>
           </InlineStack>
         </InlineStack>
       </BlockStack>
+      )}
 
-      <div style={{ marginTop: "1rem", background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
+      {view === "list" && (
+      <div style={{ background: "#fff", border: "1px solid #e5e7eb", borderRadius: "12px", overflow: "hidden" }}>
         <div style={{ padding: "1rem 1.1rem", borderBottom: "1px solid #e5e7eb" }}>
           <p style={{ margin: 0, fontWeight: 700, color: "#111827" }}>Configured discount offers</p>
         </div>
         {offers.length === 0 ? (
           <p style={{ margin: 0, padding: "1.5rem", color: "#6b7280" }}>
-            No discount offers yet. Create the first one above, then enable the Bundle Offers app embed in the theme customizer.
+            No discount offers yet. Create your first offer, then enable the Bundle Offers app embed in the theme customizer.
           </p>
         ) : (
           <table style={{ width: "100%", borderCollapse: "collapse" }}>
@@ -587,7 +628,9 @@ export default function BundleOffersTab() {
           </table>
         )}
       </div>
+      )}
 
+      {view === "detail" && (
       <div style={{ marginTop: "1.5rem" }}>
         <FeatureHelpCard
           intro="You can browse our app guide to understand discount offers, read simple examples, and get setup help whenever you need it."
@@ -623,6 +666,7 @@ export default function BundleOffersTab() {
           ]}
         />
       </div>
+      )}
     </>
   );
 }
