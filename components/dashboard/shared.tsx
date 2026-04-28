@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import type { ThemeSummary, LaunchpadSchedule } from "./types/theme";
 
 // ─── Re-exports for backward compatibility ────────────────────────────────────
 // Tabs should import directly from the domain files below, but these re-exports
@@ -119,61 +118,42 @@ export function AppHealthCheck({ storeName }: { storeName?: string }) {
 export function ModuleOverviewStrip() {
   const [data, setData] = useState<{
     upsells: number | null;
-    cartLimits: number | null;
     bxgyRules: number | null;
     bundles: number | null;
     postPurchaseOffers: number | null;
     geoCountdowns: number | null;
-    liveTheme: string | null;
-    launchpadPending: number | null;
   }>({
     upsells: null,
-    cartLimits: null,
     bxgyRules: null,
     bundles: null,
     postPurchaseOffers: null,
     geoCountdowns: null,
-    liveTheme: null,
-    launchpadPending: null,
   });
 
   useEffect(() => {
     Promise.all([
       fetch("/api/standalone/upsells").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/standalone/cart-limits").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/standalone/bxgy-stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/standalone/bundles").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/standalone/post-purchase-stats").then((r) => (r.ok ? r.json() : null)).catch(() => null),
       fetch("/api/standalone/geo-countdown").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/standalone/themes").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-      fetch("/api/standalone/launchpad").then((r) => (r.ok ? r.json() : null)).catch(() => null),
-    ]).then(([upsells, cartLimits, bxgyStats, bundles, postPurchaseStats, geoCountdown, themes, launchpad]) => {
-      const themeList: ThemeSummary[] = themes?.themes ?? [];
-      const liveTheme = themeList.find((theme) => theme.role === "MAIN")?.name ?? null;
-      const launchpadSchedules: LaunchpadSchedule[] = launchpad?.schedules ?? [];
-
+    ]).then(([upsells, bxgyStats, bundles, postPurchaseStats, geoCountdown]) => {
       setData({
         upsells: upsells?.rules?.length ?? 0,
-        cartLimits: cartLimits?.rules?.length ?? 0,
         bxgyRules: bxgyStats?.summary?.activeRules ?? 0,
         bundles: bundles?.offers?.length ?? 0,
         postPurchaseOffers: postPurchaseStats?.summary?.activeOffers ?? 0,
         geoCountdowns: geoCountdown?.campaigns?.length ?? 0,
-        liveTheme,
-        launchpadPending: launchpadSchedules.filter((schedule) => schedule.status === "pending").length,
       });
     });
   }, []);
 
   const cards = [
     { label: "Upsells", value: data.upsells, sub: "Active product upsell rules" },
-    { label: "Cart Limits", value: data.cartLimits, sub: "Restricted cart products" },
     { label: "Buy X Get Y", value: data.bxgyRules, sub: "Live free gift campaigns" },
     { label: "Bundle Offers", value: data.bundles, sub: "Bundle products with native codes" },
     { label: "Post-Purchase", value: data.postPurchaseOffers, sub: "Offers after checkout" },
     { label: "Geo Countdown", value: data.geoCountdowns, sub: "Countdown campaigns" },
-    { label: "Live Theme", value: data.liveTheme, sub: "Current published storefront" },
-    { label: "Launchpad", value: data.launchpadPending, sub: "Pending scheduled publishes" },
   ];
 
   return (

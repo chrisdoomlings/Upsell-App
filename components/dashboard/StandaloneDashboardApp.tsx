@@ -10,9 +10,6 @@ const OverviewTab = dynamic(() => import("./tabs/OverviewTab"), {
 const ProductsTab = dynamic(() => import("./tabs/ProductsTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading products...</div>,
 });
-const CartLimitsTab = dynamic(() => import("./tabs/CartLimitsTab"), {
-  loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading cart limits...</div>,
-});
 const UpsellsTab = dynamic(() => import("./tabs/UpsellsTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading upsells...</div>,
 });
@@ -25,15 +22,6 @@ const BundleOffersTab = dynamic(() => import("./tabs/BundleOffersTab"), {
 const GeoCountdownTab = dynamic(() => import("./tabs/GeoCountdownTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading geo countdown...</div>,
 });
-const CustomCursorTab = dynamic(() => import("./tabs/CustomCursorTab"), {
-  loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading custom cursor...</div>,
-});
-const LaunchpadTab = dynamic(() => import("./tabs/LaunchpadTab"), {
-  loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading theme scheduler...</div>,
-});
-const VersionHistoryTab = dynamic(() => import("./tabs/VersionHistoryTab"), {
-  loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading version history...</div>,
-});
 const PostPurchaseTab = dynamic(() => import("./tabs/PostPurchaseTab"), {
   loading: () => <div style={{ textAlign: "center", padding: "4rem", color: "#6d7175" }}>Loading post-purchase...</div>,
 });
@@ -44,14 +32,10 @@ const StatsTab = dynamic(() => import("./tabs/StatsTab"), {
 const VALID_TABS = [
   "overview",
   "products",
-  "cartlimits",
   "upsells",
   "buyxgety",
   "bundles",
   "geocountdown",
-  "customcursor",
-  "themeswitcher",
-  "history",
   "postpurchase",
   "stats",
 ] as const;
@@ -83,14 +67,10 @@ export default function StandaloneDashboardApp({ activeTab }: { activeTab: Tab }
     <DashboardShell shopDomain={shopInfo?.shop} storeUrl={shopInfo?.storeUrl} adminUrl={shopInfo?.adminUrl} activeTab={tab}>
       {tab === "overview" && <OverviewTab days={days} setDays={setDays} storeName={shopInfo?.storeName} />}
       {tab === "products" && <ProductsTab storeUrl={shopInfo?.storeUrl} adminUrl={shopInfo?.adminUrl} />}
-      {tab === "cartlimits" && <CartLimitsTab />}
       {tab === "upsells" && <UpsellsTab storeUrl={shopInfo?.storeUrl} />}
       {tab === "buyxgety" && <BuyXGetYTabPolaris />}
       {tab === "bundles" && <BundleOffersTab />}
       {tab === "geocountdown" && <GeoCountdownTab />}
-      {tab === "customcursor" && <CustomCursorTab />}
-      {tab === "themeswitcher" && <LaunchpadTab />}
-      {tab === "history" && <VersionHistoryTab />}
       {tab === "postpurchase" && <PostPurchaseTab />}
       {tab === "stats" && <StatsTab />}
     </DashboardShell>

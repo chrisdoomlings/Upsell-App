@@ -4,14 +4,10 @@ import StandaloneDashboardApp from "@/components/dashboard/StandaloneDashboardAp
 const VALID_TABS = [
   "overview",
   "products",
-  "cartlimits",
   // "geocountdown", // hidden for now
   "upsells",
   "buyxgety",
   "bundles",
-  "customcursor",
-  "themeswitcher",
-  "history",
   "postpurchase",
   "stats",
 ] as const;

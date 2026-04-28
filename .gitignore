@@ -31,3 +31,4 @@ next-env.d.ts
 theme/  
 .vercel
 .env*.local
+docs
