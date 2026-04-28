@@ -18,7 +18,7 @@ import { safeJson, fmt } from "../shared";
 import { type Product, PolarisProductAutocomplete, hasMeaningfulVariants } from "../products";
 import type { BundleOffer, BundleOfferItem } from "../types/bundle";
 
-const EMPTY_ITEM_PICKER = "";
+const EMPTY_ITEM_PICKER = ""; 
 
 export default function BundleOffersTab() {
   const [offers, setOffers] = useState<BundleOffer[]>([]);
